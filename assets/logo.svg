@@ -1,0 +1,12 @@
+<svg viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="48" height="56">
+  <title>Miru logo mark</title>
+  <desc>A single continuous spiral stroke, hand-drawn in character, unwinding outward from centre. The line tapers as it releases — the mark of a breath completing.</desc>
+  <path
+    d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+    stroke="#2da96e"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    fill="none"
+    opacity="0.88"
+  />
+</svg>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Miru</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="screen.css" />
+  <style>
+    body.screen { justify-content: center; }
+
+    .scrim {
+      position: fixed; inset: 0;
+      background: var(--scrim);
+      display: flex; align-items: center; justify-content: center;
+      animation: miru-fade 0.6s ease both;
+    }
+    .scrim.hidden { display: none; }
+
+    .card {
+      background: var(--card);
+      border: 0.5px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 300px;
+      text-align: center;
+      display: flex; flex-direction: column; align-items: center; gap: 1rem;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+      animation: miru-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+    }
+
+    @keyframes mini-breathe {
+      0%, 100% { transform: scale(1);   opacity: 0.55; }
+      50%      { transform: scale(1.4); opacity: 1; }
+    }
+    .mini-ring {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 1.5px solid var(--green-primary);
+      animation: mini-breathe 4s ease-in-out infinite;
+    }
+    .card .phrase { font-size: 22px; }
+    .count { font-size: 13px; color: var(--muted); }
+    .actions { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.25rem; flex-wrap: wrap; }
+
+    .newtab {
+      display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 0.75rem;
+    }
+    .newtab.show { display: flex; animation: miru-fade 0.5s ease both; }
+  </style>
+</head>
+<body class="screen">
+  <div class="scrim" id="scrim">
+    <div class="card">
+      <div class="mini-ring"></div>
+      <div class="phrase" id="phrase"></div>
+      <div class="count" id="count"></div>
+      <div class="actions">
+        <button class="action-link" id="close">close a tab first</button>
+        <button class="ghost-btn" id="anyway">open anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="newtab" id="newtab">
+    <svg class="logo" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="44" height="51">
+      <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+        stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.9" />
+    </svg>
+    <div class="wordmark">miru</div>
+    <div class="tagline">Browse with intention.</div>
+    <div class="hint">Type a destination in the address bar above.</div>
+  </div>
+
+  <script src="../utils/theme.js"></script>
+  <script src="../utils/words.js"></script>
+  <script src="tablimit.js"></script>
+</body>
+</html>

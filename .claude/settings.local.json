@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm ls *)",
+      "Bash(python3 -c \"import cairosvg; print\\('cairosvg ok'\\)\")",
+      "Bash(python3 -c \"import PIL; print\\('PIL ok'\\)\")",
+      "Bash(qlmanage -t -s 512 -o /private/tmp/claude-501/-Users-abdulkadirdogan-Documents-Developer-miru/71239f46-87d3-4a9c-88fa-a3a3ada75036/scratchpad/icons assets/logo.svg)",
+      "Bash(qlmanage -t -s 512 -o /private/tmp/claude-501/-Users-abdulkadirdogan-Documents-Developer-miru/71239f46-87d3-4a9c-88fa-a3a3ada75036/scratchpad/icons /private/tmp/claude-501/-Users-abdulkadirdogan-Documents-Developer-miru/71239f46-87d3-4a9c-88fa-a3a3ada75036/scratchpad/icons/icon.svg)",
+      "Bash(sips -g pixelWidth -g pixelHeight /private/tmp/claude-501/-Users-abdulkadirdogan-Documents-Developer-miru/71239f46-87d3-4a9c-88fa-a3a3ada75036/scratchpad/icons/icon.svg.png)",
+      "Bash(cd *)",
+      "Bash(node --check background.js)",
+      "Bash(node --check options/options.js)",
+      "Bash(node --check utils/storage.js)",
+      "Bash(node -e \"JSON.parse\\(require\\('fs'\\).readFileSync\\('manifest.json','utf8'\\)\\);console.log\\('manifest ok'\\)\")",
+      "Bash(node --check content.js)",
+      "Bash(node -e ' *)",
+      "Bash(node --check screens/breath.js)",
+      "Bash(node --check utils/overlay.js)"
+    ]
+  }
+}

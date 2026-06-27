@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tend your rhythm — Miru</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div class="shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <svg class="logo" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="30" height="35">
+          <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+            stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.88" />
+        </svg>
+        <span class="wordmark">miru</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-target="sec-blocked">Blocked Sites</button>
+        <button class="nav-item" data-target="sec-tabs">Tab Limit</button>
+        <button class="nav-item" data-target="sec-breath">Breathing</button>
+        <button class="nav-item" data-target="sec-sessions">Focus Sessions</button>
+        <button class="nav-item" data-target="sec-appearance">Appearance</button>
+        <button class="nav-item" data-target="sec-about">About</button>
+      </nav>
+      <div class="saved-note" id="saved-note">Everything is saved.</div>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+
+      <!-- Focus Sessions -->
+      <section class="section" id="sec-sessions">
+        <h2 class="heading">Focus Sessions</h2>
+        <p class="sub">Name the seasons of your work. Sessions can repeat on a rhythm.</p>
+
+        <div class="card">
+          <div class="field">
+            <label>Name</label>
+            <input type="text" id="fs-name" placeholder="Deep work" />
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Duration (minutes)</label>
+              <input type="number" id="fs-duration" value="45" min="1" max="600" />
+            </div>
+            <div class="field">
+              <label>Start time</label>
+              <input type="time" id="fs-start" value="09:00" />
+            </div>
+          </div>
+          <div class="field">
+            <label>Repeat</label>
+            <div class="days" id="fs-days">
+              <button class="day" data-day="1">Mon</button>
+              <button class="day" data-day="2">Tue</button>
+              <button class="day" data-day="3">Wed</button>
+              <button class="day" data-day="4">Thu</button>
+              <button class="day" data-day="5">Fri</button>
+              <button class="day" data-day="6">Sat</button>
+              <button class="day" data-day="0">Sun</button>
+            </div>
+          </div>
+          <button class="cta" id="fs-add">Plant the session.</button>
+        </div>
+
+        <ul class="session-list" id="session-list"></ul>
+      </section>
+
+      <!-- Blocked Sites -->
+      <section class="section active" id="sec-blocked">
+        <h2 class="heading">Blocked Sites</h2>
+        <p class="sub">What needs protecting? These sites meet a calm pause instead.</p>
+
+        <div class="card">
+          <form class="field-row inline" id="block-form">
+            <input type="text" id="block-input" placeholder="plant a site, e.g. news.com" />
+            <button type="submit" class="cta narrow">Plant a blocker.</button>
+          </form>
+          <ul class="site-list" id="block-list"></ul>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Only block during focus sessions</div>
+              <div class="toggle-desc">When off, blocked sites are always tended.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="block-during-only" />
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab Limit -->
+      <section class="section" id="sec-tabs">
+        <h2 class="heading">Tab Limit</h2>
+        <p class="sub">Go deep, not wide.</p>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Enable tab limit</div>
+              <div class="toggle-desc">Opening beyond this limit will show a breathing pause.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="tab-enabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field">
+            <label>Maximum tabs</label>
+            <input type="number" id="tab-limit" value="3" min="1" max="20" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Breathing -->
+      <section class="section" id="sec-breath">
+        <h2 class="heading">Breathing</h2>
+        <p class="sub">A breath before each new place, and gentle returns while you work.</p>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Navigation breath</div>
+              <div class="toggle-desc">A pause before entering a new domain.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="nav-breath" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field">
+            <label>Breath length — <span id="breath-dur-val">15</span>s</label>
+            <input type="range" id="breath-duration" min="5" max="30" value="15" step="1" />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Periodic breath during sessions</div>
+              <div class="toggle-desc">A brief return to the present, mid-work.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="periodic-breath" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field">
+            <label>Interval</label>
+            <div class="pills" id="interval-pills">
+              <button class="pill" data-int="10">every 10m</button>
+              <button class="pill" data-int="15">every 15m</button>
+              <button class="pill" data-int="20">every 20m</button>
+              <button class="pill" data-int="30">every 30m</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Night mode</div>
+              <div class="toggle-desc">During these hours, sites meet a quiet pause.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="night-enabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>From</label>
+              <input type="time" id="night-start" value="22:00" />
+            </div>
+            <div class="field">
+              <label>Until</label>
+              <input type="time" id="night-end" value="07:00" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Appearance -->
+      <section class="section" id="sec-appearance">
+        <h2 class="heading">Appearance</h2>
+        <p class="sub">Adjust the light.</p>
+        <div class="card">
+          <div class="field">
+            <label>Theme</label>
+            <div class="pills" id="theme-pills">
+              <button class="pill" data-theme="auto">Auto</button>
+              <button class="pill" data-theme="light">Light</button>
+              <button class="pill" data-theme="dark">Dark</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- About -->
+      <section class="section" id="sec-about">
+        <h2 class="heading">About</h2>
+        <div class="card about">
+          <svg class="logo-lg" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="44" height="51">
+            <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+              stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.88" />
+          </svg>
+          <div class="about-wordmark">miru</div>
+          <div class="about-tag">Browse with intention.</div>
+          <div class="about-version">Version <span id="about-version">1.0.0</span></div>
+          <div class="about-privacy">Miru stores your settings locally. Nothing leaves your device.</div>
+          <div class="about-credit">Made for quieter browsing.</div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="../utils/words.js"></script>
+  <script src="../utils/domains.js"></script>
+  <script src="../utils/storage.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
