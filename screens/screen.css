@@ -1,0 +1,200 @@
+/* Miru — Screen styles for the tab-limit page (screens/tablimit.html).
+   The in-page breath/block layers are styled by utils/overlay.js instead. */
+
+:root {
+  --green-deep: #0f4a2e;
+  --green-dark: #1d7a4e;
+  --green-primary: #2da96e;
+  --green-light: #7dd4a8;
+  --green-pale: #d6f2e6;
+  --green-muted: #a8dfc4;
+
+  /* Light (default tokens) */
+  --bg: #f7f5ef;
+  --card: #ffffff;
+  --text: #3d3d3a;
+  --muted: #888780;
+  --border: #c8c6bd;
+  --surface: #ede9df;
+  --scrim: rgba(28, 28, 26, 0.80);
+  --accent: var(--green-dark);
+}
+
+:root[data-theme="dark"] {
+  --bg: #16160f;
+  --card: #21211a;
+  --text: #ece9df;
+  --muted: #9d9b91;
+  --border: #34332a;
+  --surface: #2a2a22;
+  --scrim: rgba(6, 6, 4, 0.82);
+  --accent: var(--green-light);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body { width: 100%; height: 100%; }
+
+body.screen {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 300;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  overflow: hidden;
+  animation: miru-fade 0.7s ease both;
+}
+
+@keyframes miru-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes miru-rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Guided breathing circle (JS-driven scale + phase) ------------------- */
+.breath-area {
+  position: relative;
+  width: 240px;
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.breath-circle {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  border: 1.5px solid var(--green-primary);
+  transform: scale(1);
+  transition: transform 4s ease-in-out, opacity 4s ease-in-out;
+  opacity: 0.85;
+}
+.breath-glow {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--green-primary) 0%, transparent 70%);
+  opacity: 0.12;
+  transform: scale(1);
+  transition: transform 4s ease-in-out, opacity 4s ease-in-out;
+}
+.phase {
+  position: relative;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--accent);
+  text-indent: 0.28em;
+}
+
+/* ---- Words & text ------------------------------------------------------- */
+.breath-word {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
+  font-style: italic;
+  font-size: 30px;
+  color: var(--text);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+  text-align: center;
+  min-height: 1.3em;
+}
+.breath-word.show { opacity: 0.92; }
+
+.phrase {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300;
+  font-size: 30px;
+  color: var(--text);
+  text-align: center;
+}
+
+.wordmark {
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 300;
+  font-size: 30px;
+  letter-spacing: 0.2em;
+  color: var(--text);
+}
+.tagline {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--accent);
+}
+
+.logo { opacity: 0.9; }
+
+/* Domain / destination pill */
+.pill {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 10px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  max-width: 72vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hint { font-size: 12px; color: var(--muted); }
+
+/* Links / actions */
+.action-link {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--green-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 4px;
+  transition: color 0.2s ease;
+}
+.action-link:hover { color: var(--accent); }
+
+.ghost-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  background: transparent;
+  border: 0.5px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 16px;
+  cursor: pointer;
+  user-select: none;
+}
+.ghost-btn:hover { border-color: var(--muted); color: var(--text); }
+
+.skip {
+  position: fixed;
+  bottom: 26px;
+  right: 28px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  user-select: none;
+}
+.skip.show { opacity: 0.75; }
+.skip:hover { opacity: 1; color: var(--accent); }
+
+.bottom-pill {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+}
