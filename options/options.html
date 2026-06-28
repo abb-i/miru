@@ -86,6 +86,16 @@
         </div>
 
         <div class="card">
+          <div class="toggle-title">Allowed exceptions</div>
+          <div class="toggle-desc">Keep these reachable, even when their parent site is blocked — e.g. studio.youtube.com while youtube.com rests.</div>
+          <form class="field-row inline" id="allow-form">
+            <input type="text" id="allow-input" placeholder="keep a path open, e.g. studio.youtube.com" />
+            <button type="submit" class="cta narrow">Keep it open.</button>
+          </form>
+          <ul class="site-list" id="allow-list"></ul>
+        </div>
+
+        <div class="card">
           <div class="toggle-row">
             <div>
               <div class="toggle-title">Only block during focus sessions</div>
@@ -147,8 +157,8 @@
         <div class="card">
           <div class="toggle-row">
             <div>
-              <div class="toggle-title">Periodic breath during sessions</div>
-              <div class="toggle-desc">A brief return to the present, mid-work.</div>
+              <div class="toggle-title">Periodic breath</div>
+              <div class="toggle-desc">A brief return to the present, on a steady rhythm as you browse.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="periodic-breath" />

@@ -15,7 +15,8 @@
       "Bash(node --check content.js)",
       "Bash(node -e ' *)",
       "Bash(node --check screens/breath.js)",
-      "Bash(node --check utils/overlay.js)"
+      "Bash(node --check utils/overlay.js)",
+      "Bash(node --check screens/tablimit.js)"
     ]
   }
 }

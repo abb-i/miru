@@ -39,6 +39,7 @@ async function loadAll() {
   // Blocked sites
   document.getElementById('block-during-only').checked = s.blockDuringSessionsOnly;
   renderBlockList(s.blockedSites);
+  renderAllowList(s.customExcludedDomains);
 
   // Tab limit
   document.getElementById('tab-enabled').checked = s.tabLimitEnabled;
@@ -82,6 +83,23 @@ function bindControls() {
       s.blockedSites.push(val);
       await saveSetting('blockedSites', s.blockedSites);
       renderBlockList(s.blockedSites);
+      flashSaved();
+    }
+    input.value = '';
+  });
+
+  // Allowed exceptions: add
+  document.getElementById('allow-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('allow-input');
+    const val = normalizeDomain(input.value);
+    if (!val) return;
+    const s = await getSettings();
+    const list = s.customExcludedDomains || [];
+    if (!list.includes(val)) {
+      list.push(val);
+      await saveSetting('customExcludedDomains', list);
+      renderAllowList(list);
       flashSaved();
     }
     input.value = '';
@@ -175,6 +193,37 @@ function renderBlockList(sites) {
       const next = s.blockedSites.filter(d => d !== site);
       await saveSetting('blockedSites', next);
       renderBlockList(next);
+      flashSaved();
+    });
+    li.append(span, btn);
+    list.appendChild(li);
+  });
+}
+
+// ---- Allowed exceptions rendering -------------------------------------------
+function renderAllowList(domains) {
+  const list = document.getElementById('allow-list');
+  list.innerHTML = '';
+  domains = domains || [];
+  if (!domains.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'No exceptions kept.';
+    list.appendChild(note);
+    return;
+  }
+  domains.forEach(domain => {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    span.textContent = domain;
+    const btn = document.createElement('button');
+    btn.className = 'remove';
+    btn.textContent = '×';
+    btn.addEventListener('click', async () => {
+      const s = await getSettings();
+      const next = (s.customExcludedDomains || []).filter(d => d !== domain);
+      await saveSetting('customExcludedDomains', next);
+      renderAllowList(next);
       flashSaved();
     });
     li.append(span, btn);
