@@ -17,10 +17,13 @@
     });
   });
 
-  // Proceed: dismiss the pause and reveal a calm, usable new-tab surface.
-  // (Extensions can't restore chrome://newtab, so we offer our own quiet page;
-  // the user types their destination in the address bar.)
+  // Proceed: honour where the user was actually headed. If this tab was opened
+  // for a real destination (a link / window.open), go straight there. Otherwise
+  // (a blank new tab) reveal our own quiet new-tab surface — extensions can't
+  // restore chrome://newtab — so the user can type a destination.
   document.getElementById('anyway').addEventListener('click', () => {
+    const target = params.get('target');
+    if (target) { location.replace(target); return; }
     document.getElementById('scrim').classList.add('hidden');
     document.getElementById('newtab').classList.add('show');
   });

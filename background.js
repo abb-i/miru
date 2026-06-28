@@ -23,11 +23,22 @@ let settings = { ...DEFAULTS };
 let sessionActive = false;
 
 // --- Rule building ----------------------------------------------------------
+function cleanDomain(d) {
+  return (d || '').replace(/^www\./, '').trim().toLowerCase();
+}
+
+// User-defined exceptions only (no built-in ALWAYS_EXCLUDED). Used as carve-outs
+// for the block rule so a subdomain like studio.youtube.com can stay reachable
+// while youtube.com is blocked — without ALWAYS_EXCLUDED self-excluding a block.
+function customExceptionsDNR() {
+  return [...new Set((settings.customExcludedDomains || []).map(cleanDomain).filter(Boolean))];
+}
+
 function excludedDNR() {
   // DNR matches a domain and its subdomains automatically. Drop IPs/localhost
   // (not valid DNR domains) to avoid rejecting the whole rule.
   const base = ALWAYS_EXCLUDED.filter((d) => d && d !== '127.0.0.1' && d !== 'localhost');
-  const custom = (settings.customExcludedDomains || []).map((d) => (d || '').replace(/^www\./, '').trim().toLowerCase());
+  const custom = (settings.customExcludedDomains || []).map(cleanDomain);
   return [...new Set([...base, ...custom])].filter(Boolean);
 }
 
@@ -56,13 +67,19 @@ async function rebuildRules() {
   const blockOn = settings.blockedSites && settings.blockedSites.length &&
     (!settings.blockDuringSessionsOnly || sessionActive);
   if (blockOn) {
+    const exceptions = customExceptionsDNR();
     settings.blockedSites.forEach((d, i) => {
-      const dom = (d || '').replace(/^www\./, '').trim().toLowerCase();
+      const dom = cleanDomain(d);
       if (!dom) return;
+      // A blocked domain matches its subdomains too. Carve out any allowed
+      // exception that sits under it (e.g. studio.youtube.com under youtube.com).
+      const carveOut = exceptions.filter((e) => e === dom || e.endsWith('.' + dom));
+      const condition = { requestDomains: [dom], resourceTypes: ['main_frame'] };
+      if (carveOut.length) condition.excludedRequestDomains = carveOut;
       add.push({
         id: RID_BLOCK_BASE + i, priority: 10,
         action: { type: 'redirect', redirect: { url: blockUrl + '?site=' + encodeURIComponent(dom) } },
-        condition: { requestDomains: [dom], resourceTypes: ['main_frame'] }
+        condition
       });
     });
   }
@@ -119,10 +136,22 @@ async function init() {
   } catch (e) {}
   await rebuildRules();
   await applyAllowRule();
+  applyPeriodicBreath();
   chrome.alarms.create('miru-schedule', { periodInMinutes: 1 });
   try { chrome.idle.setDetectionInterval(60); } catch (e) {}
 }
 async function reloadSettings() { settings = await getSettings(); }
+
+// Periodic breath runs globally on its own rhythm — not tied to focus sessions.
+// Recreating the alarm restarts the interval, so only call this when the
+// enabled flag or interval actually changes (or on worker init).
+function applyPeriodicBreath() {
+  chrome.alarms.clear('miru-periodic');
+  if (settings.periodicBreathEnabled) {
+    const m = settings.periodicBreathInterval || 15;
+    chrome.alarms.create('miru-periodic', { periodInMinutes: m, delayInMinutes: m });
+  }
+}
 
 chrome.runtime.onInstalled.addListener(async () => {
   const cur = await chrome.storage.sync.get(null);
@@ -135,7 +164,14 @@ chrome.runtime.onStartup.addListener(init);
 reloadSettings(); // keep `settings` warm for messaging on every worker wake
 
 chrome.storage.onChanged.addListener(async (c, area) => {
-  if (area === 'sync') { await reloadSettings(); await rebuildRules(); await applyAllowRule(); }
+  if (area === 'sync') {
+    await reloadSettings();
+    await rebuildRules();
+    await applyAllowRule();
+    // Only restart the periodic-breath timer when its own settings change, so
+    // editing unrelated settings doesn't reset the interval.
+    if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
+  }
   if (area === 'local' && c.activeSession) { sessionActive = !!c.activeSession.newValue; await rebuildRules(); }
 });
 
@@ -155,16 +191,46 @@ chrome.tabs.onUpdated.addListener((id, info) => {
   if (info.url || info.status === 'complete') { scheduleAllow(); updateActive(); }
 });
 chrome.tabs.onRemoved.addListener((id) => { DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {}); scheduleAllow(); });
+// Resolve with a tab's destination URL once it commits, or null if it isn't a
+// real http(s) link. Tells a link's new tab (opened blank, navigated a beat
+// later) apart from a genuinely empty new tab. Resolves as soon as *any*
+// destination commits — an http(s) URL → that link; anything else (e.g.
+// chrome://newtab) → null — so an empty new tab never waits out the timeout.
+// about:blank/empty are the transient pre-navigation state, so we keep waiting.
+function waitForNav(tabId, ms) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; chrome.tabs.onUpdated.removeListener(onUpd); clearTimeout(timer); resolve(v); };
+    const decide = (u) => { if (u && u !== 'about:blank') finish(/^https?:\/\//i.test(u) ? u : null); };
+    const onUpd = (id, info) => { if (id === tabId) decide(info.url || ''); };
+    chrome.tabs.onUpdated.addListener(onUpd);
+    // The navigation may have already populated the tab before we attached.
+    chrome.tabs.get(tabId, (tab) => {
+      if (chrome.runtime.lastError) return; // tab gone
+      decide(tab && (tab.pendingUrl || tab.url) || '');
+    });
+    const timer = setTimeout(() => finish(null), ms);
+  });
+}
+
 chrome.tabs.onCreated.addListener(async (tab) => {
   scheduleAllow();
-  const u = tab.url || tab.pendingUrl || '';
+  const u = tab.pendingUrl || tab.url || '';
   if (u.startsWith(SELF)) return;
   if (!settings.tabLimitEnabled) return;
   const tabs = await chrome.tabs.query({ currentWindow: true });
-  if (tabs.length > (settings.tabLimit || 3)) {
-    const url = chrome.runtime.getURL('screens/tablimit.html') + '?count=' + tabs.length + '&theme=' + settings.theme;
-    chrome.tabs.update(tab.id, { url }).catch(() => {});
-  }
+  if (tabs.length <= (settings.tabLimit || 3)) return;
+  // Over the limit: show the gentle reminder ("go deep, not wide"). But a tab
+  // opened with a real destination (link target=_blank, window.open) must not
+  // lose it — capture the URL so "Continue" can still take the user there. The
+  // tab is often created blank and navigates a beat later, so if the URL isn't
+  // on it yet (openerTabId means it came from a page), wait briefly for it.
+  let target = /^https?:\/\//i.test(u) ? u : '';
+  if (!target && tab.openerTabId != null) target = (await waitForNav(tab.id, 1500)) || '';
+  const url = chrome.runtime.getURL('screens/tablimit.html') +
+    '?count=' + tabs.length + '&theme=' + settings.theme +
+    (target ? '&target=' + encodeURIComponent(target) : '');
+  chrome.tabs.update(tab.id, { url }).catch(() => {});
 });
 chrome.tabs.onActivated.addListener(() => updateActive());
 
@@ -176,12 +242,7 @@ async function startSession({ name, duration }) {
   sessionActive = true;
   await rebuildRules();
   chrome.alarms.create('miru-session-end', { when: endTime });
-  if (settings.periodicBreathEnabled) {
-    chrome.alarms.create('miru-periodic', {
-      periodInMinutes: settings.periodicBreathInterval || 15,
-      delayInMinutes: settings.periodicBreathInterval || 15
-    });
-  }
+  // Periodic breath is global (see applyPeriodicBreath) — not started here.
   return { name, duration, startedAt, endTime };
 }
 async function endSession({ silent } = {}) {
@@ -189,14 +250,19 @@ async function endSession({ silent } = {}) {
   sessionActive = false;
   await rebuildRules();
   chrome.alarms.clear('miru-session-end');
-  chrome.alarms.clear('miru-periodic');
   if (!silent) openBreathTab('focusEnd', 8);
 }
 
 chrome.alarms.onAlarm.addListener(async (a) => {
+  // The worker may have just woken for this alarm; make sure settings are fresh.
+  await reloadSettings();
   if (a.name === 'miru-session-end') await endSession();
   else if (a.name === 'miru-periodic') {
-    if (!(await getActiveSession())) { chrome.alarms.clear('miru-periodic'); return; }
+    if (!settings.periodicBreathEnabled) { chrome.alarms.clear('miru-periodic'); return; }
+    // Don't pile up breath tabs while the user is away from the machine.
+    let state = 'active';
+    try { state = await chrome.idle.queryState(60); } catch (e) {}
+    if (state !== 'active') return;
     openBreathTab('periodic', settings.breathDuration || 15);
   } else if (a.name === 'miru-schedule') {
     await checkScheduled();
