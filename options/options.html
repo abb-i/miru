@@ -25,6 +25,7 @@
         <button class="nav-item" data-target="sec-tabs">Tab Limit</button>
         <button class="nav-item" data-target="sec-breath">Breathing</button>
         <button class="nav-item" data-target="sec-sessions">Focus Sessions</button>
+        <button class="nav-item" data-target="sec-break">Break</button>
         <button class="nav-item" data-target="sec-appearance">Appearance</button>
         <button class="nav-item" data-target="sec-about">About</button>
       </nav>
@@ -70,6 +71,19 @@
         </div>
 
         <ul class="session-list" id="session-list"></ul>
+      </section>
+
+      <!-- Break -->
+      <section class="section" id="sec-break">
+        <h2 class="heading">Break</h2>
+        <p class="sub">A healthy balance includes rest. Once a day, step away from the rules.</p>
+
+        <div class="card">
+          <div class="toggle-title">Take today's break</div>
+          <div class="toggle-desc">For 30 minutes, blocked sites open again and no breath is asked before entering a site. One break per day — spend it well.</div>
+          <button class="cta" id="break-btn">Take a break · 30 minutes</button>
+          <div class="break-status" id="break-status"></div>
+        </div>
       </section>
 
       <!-- Blocked Sites -->
@@ -141,7 +155,7 @@
           <div class="toggle-row">
             <div>
               <div class="toggle-title">Navigation breath</div>
-              <div class="toggle-desc">A pause before entering a new domain.</div>
+              <div class="toggle-desc">A pause before entering a new domain. It always completes its full cycle.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="nav-breath" />
@@ -149,8 +163,60 @@
             </label>
           </div>
           <div class="field">
-            <label>Breath length — <span id="breath-dur-val">15</span>s</label>
-            <input type="range" id="breath-duration" min="5" max="30" value="15" step="1" />
+            <label>Length of the pause</label>
+            <div class="pills" id="breath-len-pills">
+              <button class="pill" data-len="10">one breath</button>
+              <button class="pill" data-len="25">two breaths</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div>
+            <div class="toggle-title">The breath itself</div>
+            <div class="toggle-desc">The pattern every pause follows.</div>
+          </div>
+          <div class="field">
+            <div class="pills" id="pattern-pills">
+              <button class="pill" data-pattern="settle" title="A steady, exhale-weighted breath.">Settle · in 4 — hold 3 — out 6</button>
+              <button class="pill" data-pattern="sigh" title="Two inhales, one long exhale — the fastest way the body knows to settle.">Sigh · in — in again — long out</button>
+              <button class="pill" data-pattern="box" title="Equal sides, like the walls of a quiet room.">Box · 4 — 4 — 4 — 4</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Time mirror</div>
+              <div class="toggle-desc">When you've stayed in one place past this long, Miru holds up a gentle mirror. It only notices — it never blocks.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="mirror-enabled" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field">
+            <label>After</label>
+            <div class="pills" id="mirror-pills">
+              <button class="pill" data-min="15">15m</button>
+              <button class="pill" data-min="20">20m</button>
+              <button class="pill" data-min="30">30m</button>
+              <button class="pill" data-min="45">45m</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">First light</div>
+              <div class="toggle-desc">The first arrival of each day breathes one cycle longer and asks for a word to carry. The word rests in the popup until night.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="firstlight-enabled" />
+              <span class="slider"></span>
+            </label>
           </div>
         </div>
 
@@ -229,6 +295,7 @@
           <div class="about-version">Version <span id="about-version">1.0.0</span></div>
           <div class="about-privacy">Miru stores your settings locally. Nothing leaves your device.</div>
           <div class="about-credit">Made for quieter browsing.</div>
+          <button class="text-link" id="revisit-welcome">Return to the welcome →</button>
         </div>
       </section>
 

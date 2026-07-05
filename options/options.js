@@ -47,10 +47,15 @@ async function loadAll() {
 
   // Breathing
   document.getElementById('nav-breath').checked = s.navBreathEnabled;
-  document.getElementById('breath-duration').value = s.breathDuration;
-  document.getElementById('breath-dur-val').textContent = s.breathDuration;
+  selectPill('breath-len-pills', 'len', s.breathDuration <= 15 ? 10 : 25);
+  selectPill('pattern-pills', 'pattern', s.breathPattern);
   document.getElementById('periodic-breath').checked = s.periodicBreathEnabled;
   selectPill('interval-pills', 'int', s.periodicBreathInterval);
+
+  // Time mirror + first light
+  document.getElementById('mirror-enabled').checked = s.timeMirrorEnabled;
+  selectPill('mirror-pills', 'min', s.timeMirrorMinutes);
+  document.getElementById('firstlight-enabled').checked = s.firstLightEnabled;
 
   // Night mode
   document.getElementById('night-enabled').checked = s.nightModeEnabled;
@@ -62,6 +67,9 @@ async function loadAll() {
 
   // Sessions
   renderSessions(s.focusSessions);
+
+  // Break
+  await renderBreak();
 }
 
 function selectPill(containerId, attr, value) {
@@ -124,18 +132,28 @@ function bindControls() {
   document.getElementById('nav-breath').addEventListener('change', async (e) => {
     await saveSetting('navBreathEnabled', e.target.checked); flashSaved();
   });
-  const dur = document.getElementById('breath-duration');
-  dur.addEventListener('input', (e) => {
-    document.getElementById('breath-dur-val').textContent = e.target.value;
+  bindPills('breath-len-pills', 'len', async (val) => {
+    await saveSetting('breathDuration', Number(val)); flashSaved();
   });
-  dur.addEventListener('change', async (e) => {
-    await saveSetting('breathDuration', Number(e.target.value)); flashSaved();
+  bindPills('pattern-pills', 'pattern', async (val) => {
+    await saveSetting('breathPattern', val); flashSaved();
   });
   document.getElementById('periodic-breath').addEventListener('change', async (e) => {
     await saveSetting('periodicBreathEnabled', e.target.checked); flashSaved();
   });
   bindPills('interval-pills', 'int', async (val) => {
     await saveSetting('periodicBreathInterval', Number(val)); flashSaved();
+  });
+
+  // Time mirror + first light
+  document.getElementById('mirror-enabled').addEventListener('change', async (e) => {
+    await saveSetting('timeMirrorEnabled', e.target.checked); flashSaved();
+  });
+  bindPills('mirror-pills', 'min', async (val) => {
+    await saveSetting('timeMirrorMinutes', Number(val)); flashSaved();
+  });
+  document.getElementById('firstlight-enabled').addEventListener('change', async (e) => {
+    await saveSetting('firstLightEnabled', e.target.checked); flashSaved();
   });
 
   // Night mode
@@ -158,6 +176,27 @@ function bindControls() {
   document.querySelectorAll('#fs-days .day').forEach(d =>
     d.addEventListener('click', () => d.classList.toggle('selected')));
   document.getElementById('fs-add').addEventListener('click', addSession);
+
+  // Break: start, or end early
+  document.getElementById('break-btn').addEventListener('click', async () => {
+    const b = await getBreakState();
+    if (b && b.until > Date.now()) {
+      await chrome.runtime.sendMessage({ type: 'MIRU_END_BREAK', silent: true });
+    } else {
+      await chrome.runtime.sendMessage({ type: 'MIRU_START_BREAK' });
+    }
+    await renderBreak();
+    flashSaved();
+  });
+  // Keep the card current when the break ends on its own.
+  chrome.storage.onChanged.addListener((c, area) => {
+    if (area === 'local' && c.breakState) renderBreak();
+  });
+
+  // About: walk the welcome again
+  document.getElementById('revisit-welcome').addEventListener('click', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') });
+  });
 }
 
 function bindPills(containerId, attr, onPick) {
@@ -229,6 +268,40 @@ function renderAllowList(domains) {
     li.append(span, btn);
     list.appendChild(li);
   });
+}
+
+// ---- Break --------------------------------------------------------------------
+let breakTimer = null;
+
+async function renderBreak() {
+  clearInterval(breakTimer);
+  const btn = document.getElementById('break-btn');
+  const status = document.getElementById('break-status');
+  const b = await getBreakState();
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  if (b && b.until > Date.now()) {
+    btn.disabled = false;
+    btn.textContent = 'End the break early';
+    const tick = () => {
+      const left = b.until - Date.now();
+      if (left <= 0) { renderBreak(); return; }
+      const m = Math.floor(left / 60000);
+      const s = Math.floor((left % 60000) / 1000);
+      status.textContent = `On a break — ${m}:${String(s).padStart(2, '0')} left. Blocked sites are open; breaths are resting.`;
+    };
+    tick();
+    breakTimer = setInterval(tick, 1000);
+  } else if (b && b.usedOn === today) {
+    btn.disabled = true;
+    btn.textContent = 'Take a break · 30 minutes';
+    status.textContent = 'Today’s break is spent. It returns tomorrow.';
+  } else {
+    btn.disabled = false;
+    btn.textContent = 'Take a break · 30 minutes';
+    status.textContent = '';
+  }
 }
 
 // ---- Focus sessions ---------------------------------------------------------

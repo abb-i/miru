@@ -10,7 +10,19 @@ function init() {
   document.getElementById('open-options').addEventListener('click', openOptions);
   document.getElementById('open-options-2').addEventListener('click', openOptions);
   document.getElementById('begin-breath').addEventListener('click', beginBreath);
+  renderIntention();
   renderUsage();
+}
+
+// The word set at first light, carried quietly through the day.
+async function renderIntention() {
+  const { firstLight } = await chrome.storage.local.get('firstLight').catch(() => ({}));
+  if (!firstLight || !firstLight.intention) return;
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (firstLight.date !== today) return;
+  document.getElementById('intention-word').textContent = firstLight.intention;
+  document.getElementById('intention').hidden = false;
 }
 
 // Show a guided breath over the current page; fall back to a dedicated tab

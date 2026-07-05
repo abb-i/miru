@@ -16,7 +16,25 @@
       "Bash(node -e ' *)",
       "Bash(node --check screens/breath.js)",
       "Bash(node --check utils/overlay.js)",
-      "Bash(node --check screens/tablimit.js)"
+      "Bash(node --check screens/tablimit.js)",
+      "WebSearch",
+      "Bash(node --check utils/words.js)",
+      "Bash(node --check /Users/abdulkadirdogan/Documents/Developer/miru/background.js)",
+      "Bash(node --check /Users/abdulkadirdogan/Documents/Developer/miru/utils/domains.js)",
+      "Bash(node /private/tmp/claude-501/-Users-abdulkadirdogan-Documents-Developer-miru/5e5d4925-526f-4d9a-be6d-61027c826cc1/scratchpad/test-domains.js)",
+      "Read(//Applications/Google Chrome.app/Contents/MacOS/**)",
+      "Bash(node -e \"try{console.log\\('playwright-core', require\\('playwright-core/package.json'\\).version\\)}catch\\(e\\){console.log\\('no playwright-core'\\)}\")",
+      "Bash(npm init *)",
+      "Bash(npm install *)",
+      "Bash(node test-integration.js)",
+      "Bash(HEADED=1 node test-integration.js)",
+      "Read(//Users/abdulkadirdogan/Library/Caches/**)",
+      "Read(//Users/abdulkadirdogan/.cache/**)",
+      "Bash(npm i *)",
+      "Bash(npx playwright *)",
+      "Read(//Users/abdulkadirdogan/Library/Caches/ms-playwright/**)",
+      "Bash(node probe-breath.js)",
+      "Bash(perl -pi -e \"s/const \\(\\\\w+\\) = await ctx\\\\.newPage\\\\\\(\\\\\\);/const \\\\$1 = await ctx.newPage\\(\\); await \\\\$1.bringToFront\\(\\).catch\\(\\(\\) => {}\\);/\" test-integration.js)"
     ]
   }
 }
