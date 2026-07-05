@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome — Miru</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="onboarding.css" />
+</head>
+<body>
+  <main class="stage">
+
+    <!-- 0 · Welcome -->
+    <section class="step active" data-step="0">
+      <svg class="hero-logo" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="64" height="75">
+        <path id="hero-path" d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+          stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" />
+      </svg>
+      <div class="wordmark">miru</div>
+      <div class="etymology">Japanese — <i>to see, to look, to watch.</i></div>
+      <p class="lead">The web is a current; it carries whoever doesn't choose.<br/>
+        Miru turns it back into a garden you tend — beginning with a single breath.</p>
+      <button class="cta" data-next>Begin</button>
+    </section>
+
+    <!-- 1 · Why -->
+    <section class="step" data-step="1">
+      <h1 class="heading">What brings you here?</h1>
+      <p class="sub">This shapes Miru's first suggestions. Everything can be retuned later.</p>
+      <div class="choice-grid" id="why-grid">
+        <button class="choice" data-why="scroll">
+          <span class="choice-title">Calm the scroll</span>
+          <span class="choice-desc">The feeds pull harder than they should.</span>
+        </button>
+        <button class="choice" data-why="deep">
+          <span class="choice-title">Protect deep work</span>
+          <span class="choice-desc">Fewer doors while the real work grows.</span>
+        </button>
+        <button class="choice" data-why="evenings">
+          <span class="choice-title">Reclaim the evenings</span>
+          <span class="choice-desc">Nights that belong to rest again.</span>
+        </button>
+        <button class="choice" data-why="all">
+          <span class="choice-title">All of it</span>
+          <span class="choice-desc">A quieter web, everywhere.</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 2 · Places -->
+    <section class="step" data-step="2">
+      <h1 class="heading">Which places pull at you?</h1>
+      <p class="sub">These will meet a firm pause instead of loading. You can release them anytime.</p>
+      <div class="pills" id="place-pills">
+        <button class="pill" data-domain="instagram.com">Instagram</button>
+        <button class="pill" data-domain="x.com">X</button>
+        <button class="pill" data-domain="tiktok.com">TikTok</button>
+        <button class="pill" data-domain="reddit.com">Reddit</button>
+        <button class="pill" data-domain="facebook.com">Facebook</button>
+        <button class="pill" data-domain="youtube.com">YouTube</button>
+      </div>
+      <form id="place-form" class="place-form">
+        <input type="text" id="place-input" placeholder="another place, e.g. news.com" spellcheck="false" autocomplete="off" />
+      </form>
+      <button class="cta" data-next>Continue</button>
+      <button class="quiet" id="no-places">None of these pull at me</button>
+    </section>
+
+    <!-- 3 · Rhythm -->
+    <section class="step" data-step="3">
+      <h1 class="heading">Find your rhythm.</h1>
+      <p class="sub">A pause before each new place, a limit on how wide the day spreads.</p>
+
+      <div class="rhythm-field">
+        <label>The breath before a new place</label>
+        <div class="pills" id="breath-pills">
+          <button class="pill" data-val="10">one breath</button>
+          <button class="pill" data-val="25">two breaths</button>
+        </div>
+      </div>
+
+      <div class="rhythm-field">
+        <label>How many tabs before Miru asks</label>
+        <div class="pills" id="tab-pills">
+          <button class="pill" data-val="3">3</button>
+          <button class="pill" data-val="5">5</button>
+          <button class="pill" data-val="8">8</button>
+          <button class="pill" data-val="0">no limit</button>
+        </div>
+      </div>
+
+      <div class="rhythm-field">
+        <label>A gentle return while you browse</label>
+        <div class="pills" id="periodic-pills">
+          <button class="pill" data-val="15">every 15m</button>
+          <button class="pill" data-val="30">every 30m</button>
+          <button class="pill" data-val="0">off</button>
+        </div>
+      </div>
+
+      <button class="cta" data-next>Continue</button>
+    </section>
+
+    <!-- 4 · Evenings -->
+    <section class="step" data-step="4">
+      <h1 class="heading">And the evenings?</h1>
+      <p class="sub">During these hours the web rests — every site meets a quiet pause.</p>
+      <div class="toggle-line">
+        <span>Rest the web at night</span>
+        <label class="switch">
+          <input type="checkbox" id="night-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="night-times" id="night-times">
+        <div class="time-field"><label>from</label><input type="time" id="night-from" value="22:00" /></div>
+        <div class="time-field"><label>until</label><input type="time" id="night-until" value="07:00" /></div>
+      </div>
+      <button class="cta" data-next>Continue</button>
+    </section>
+
+    <!-- 5 · Breath & light -->
+    <section class="step" data-step="5">
+      <h1 class="heading">Choose your breath.</h1>
+      <p class="sub">The pattern Miru guides you through, everywhere a pause appears.</p>
+      <div class="choice-grid" id="pattern-grid"></div>
+      <div class="rhythm-field theme-field">
+        <label>And the light</label>
+        <div class="pills" id="theme-pills">
+          <button class="pill" data-val="dark">Dark</button>
+          <button class="pill" data-val="light">Light</button>
+          <button class="pill" data-val="auto">Auto</button>
+        </div>
+      </div>
+      <button class="cta" id="first-breath">Take the first breath</button>
+    </section>
+
+    <!-- 6 · Done -->
+    <section class="step" data-step="6">
+      <svg class="hero-logo drawn" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="52" height="61">
+        <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+          stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" />
+      </svg>
+      <div class="arrive">Miru is tending.</div>
+      <p class="lead">Every new place now begins with a breath.<br/>Tend your rhythm anytime from the small spiral in your toolbar.</p>
+      <button class="cta" id="finish">Browse with intention</button>
+    </section>
+
+    <div class="dots" id="dots" hidden>
+      <i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <button class="quiet corner" id="keep-defaults" hidden>keep the defaults →</button>
+  </main>
+
+  <script src="../utils/words.js"></script>
+  <script src="../utils/overlay.js"></script>
+  <script src="onboarding.js"></script>
+</body>
+</html>

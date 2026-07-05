@@ -11,7 +11,11 @@ const DEFAULTS = {
   blockedSites: [],                  // array of domain strings
   blockDuringSessionsOnly: false,    // false = always block
   focusSessions: [],                 // array of {id, name, duration, days, startTime, enabled}
-  breathDuration: 15,                // seconds
+  breathDuration: 15,                // seconds (rounded to whole breath cycles)
+  breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
+  timeMirrorEnabled: true,           // gentle notice after a long unbroken stay
+  timeMirrorMinutes: 20,             // continuous minutes on one domain
+  firstLightEnabled: true,           // slower first breath of the day + intention
   nightModeEnabled: false,
   nightModeStart: '22:00',
   nightModeEnd: '07:00',
@@ -52,9 +56,22 @@ async function clearActiveSession() {
   return chrome.storage.local.remove('activeSession');
 }
 
+// Break state (ephemeral, per-device). One 30-minute break per day:
+// { until: epoch-ms, usedOn: 'YYYY-MM-DD' }. `usedOn` stays after the break
+// ends so the day's break can't be taken twice.
+async function getBreakState() {
+  const { breakState } = await chrome.storage.local.get('breakState');
+  return breakState || null;
+}
+
+async function setBreakState(state) {
+  return chrome.storage.local.set({ breakState: state });
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     DEFAULTS, getSettings, getSetting, saveSetting, saveSettings,
-    getActiveSession, setActiveSession, clearActiveSession
+    getActiveSession, setActiveSession, clearActiveSession,
+    getBreakState, setBreakState
   };
 }

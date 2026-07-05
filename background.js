@@ -21,6 +21,9 @@ const RID_BREATH = 1, RID_ALLOW = 2, RID_NIGHT = 3, RID_BLOCK_BASE = 100, RID_AL
 
 let settings = { ...DEFAULTS };
 let sessionActive = false;
+let breakActive = false;
+
+const BREAK_MINUTES = 30;
 
 // --- Rule building ----------------------------------------------------------
 function cleanDomain(d) {
@@ -47,24 +50,32 @@ async function rebuildRules() {
   const blockUrl = chrome.runtime.getURL('screens/block.html');
   const add = [];
 
-  if (settings.navBreathEnabled) {
+  if (settings.navBreathEnabled && !breakActive) {
     add.push({
       id: RID_BREATH, priority: 1,
       action: { type: 'redirect', redirect: { regexSubstitution: breathUrl + '?target=\\0' } },
-      condition: { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], excludedRequestDomains: excludedDNR() }
+      // GET only: a cross-site POST (bank 3-D Secure, SSO form_post) carries a
+      // body that a redirect-then-continue would silently drop.
+      condition: { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], requestMethods: ['get'], excludedRequestDomains: excludedDNR() }
     });
   }
 
   if (settings.nightModeEnabled && isNightTime(settings)) {
     const overrides = (settings.nightModeOverrides || []).map((d) => (d || '').replace(/^www\./, '').trim().toLowerCase()).filter(Boolean);
+    // Night means night: only the user's own exceptions and night overrides stay
+    // reachable. ALWAYS_EXCLUDED (Google/YouTube) is deliberately NOT carved out
+    // here — it exempts sites from the breath, not from the night pause.
+    const nightExcluded = [...new Set([...customExceptionsDNR(), ...overrides])];
+    const condition = { regexFilter: '^https?://.*', resourceTypes: ['main_frame'] };
+    if (nightExcluded.length) condition.excludedRequestDomains = nightExcluded;
     add.push({
       id: RID_NIGHT, priority: 8,
       action: { type: 'redirect', redirect: { url: blockUrl + '?night=1' } },
-      condition: { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], excludedRequestDomains: [...excludedDNR(), ...overrides] }
+      condition
     });
   }
 
-  const blockOn = settings.blockedSites && settings.blockedSites.length &&
+  const blockOn = !breakActive && settings.blockedSites && settings.blockedSites.length &&
     (!settings.blockDuringSessionsOnly || sessionActive);
   if (blockOn) {
     const exceptions = customExceptionsDNR();
@@ -87,6 +98,27 @@ async function rebuildRules() {
   const removeIds = [RID_BREATH, RID_NIGHT];
   for (let i = 0; i < 300; i++) removeIds.push(RID_BLOCK_BASE + i);
   await DNR.updateDynamicRules({ removeRuleIds: removeIds, addRules: add }).catch((e) => console.warn('[Miru] rules', e));
+  await sweepBlockedTabs(blockOn);
+}
+
+// DNR only intercepts *new* requests, so a blocked SPA already open in a tab
+// would keep working until a reload. Whenever blocking is (re)applied, walk the
+// open tabs and bring any that sit on a blocked domain to the block page.
+async function sweepBlockedTabs(blockOn) {
+  if (!blockOn) return;
+  const blockUrl = chrome.runtime.getURL('screens/block.html');
+  const exceptions = customExceptionsDNR();
+  const domains = settings.blockedSites.map(cleanDomain).filter(Boolean);
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
+  for (const t of tabs) {
+    let host = '';
+    try { host = new URL(t.url).hostname.replace(/^www\./, '').toLowerCase(); } catch { continue; }
+    const hit = domains.find((d) => host === d || host.endsWith('.' + d));
+    if (!hit) continue;
+    if (exceptions.some((e) => host === e || host.endsWith('.' + e))) continue;
+    chrome.tabs.update(t.id, { url: blockUrl + '?site=' + encodeURIComponent(hit) }).catch(() => {});
+  }
 }
 
 // Domains currently open anywhere → allowed (so internal navigation / reloads /
@@ -99,7 +131,10 @@ async function applyAllowRule() {
     const s = new Set();
     for (const t of tabs) {
       const u = t.url || '';
-      if (/^https?:\/\//i.test(u)) { const d = getRootDomain(u); if (d) s.add(d); }
+      if (!/^https?:\/\//i.test(u)) continue;
+      const d = getRootDomain(u);
+      // IPs/IPv6 aren't valid DNR requestDomains — one would reject the whole rule.
+      if (d && !/^[\d.]+$/.test(d) && !d.includes(':')) s.add(d);
     }
     domains = [...s];
   } catch (e) {}
@@ -127,6 +162,11 @@ function isNightTime(s) {
 async function init() {
   await reloadSettings();
   sessionActive = !!(await getActiveSession());
+  // Restore a break that was running when the worker restarted, and re-arm
+  // its end alarm so it still closes on time.
+  const brk = await getBreakState();
+  breakActive = !!(brk && brk.until > Date.now());
+  if (breakActive) chrome.alarms.create('miru-break-end', { when: brk.until });
   // Clear any stale dynamic rules from a previous version before rebuilding.
   try {
     const existing = await DNR.getDynamicRules();
@@ -153,15 +193,23 @@ function applyPeriodicBreath() {
   }
 }
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   const cur = await chrome.storage.sync.get(null);
   const seed = {};
   for (const [k, v] of Object.entries(DEFAULTS)) if (!(k in cur)) seed[k] = v;
   if (Object.keys(seed).length) await chrome.storage.sync.set(seed);
   await init();
+  // First meeting: walk through what Miru is and tune it to the person.
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') }).catch(() => {});
+  }
 });
 chrome.runtime.onStartup.addListener(init);
 reloadSettings(); // keep `settings` warm for messaging on every worker wake
+// Same for the session/break flags — rebuildRules on a fresh worker must not
+// see them stale-false and drop rules mid-session or re-block mid-break.
+getActiveSession().then((s) => { sessionActive = !!s; });
+getBreakState().then((b) => { breakActive = !!(b && b.until > Date.now()); });
 
 chrome.storage.onChanged.addListener(async (c, area) => {
   if (area === 'sync') {
@@ -173,6 +221,11 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
   }
   if (area === 'local' && c.activeSession) { sessionActive = !!c.activeSession.newValue; await rebuildRules(); }
+  if (area === 'local' && c.breakState) {
+    const b = c.breakState.newValue;
+    breakActive = !!(b && b.until > Date.now());
+    await rebuildRules();
+  }
 });
 
 // --- Allow-once (post-breath continue) --------------------------------------
@@ -234,6 +287,34 @@ chrome.tabs.onCreated.addListener(async (tab) => {
 });
 chrome.tabs.onActivated.addListener(() => updateActive());
 
+// --- Breaks -------------------------------------------------------------------
+// One 30-minute break per day: blocked sites open again and the navigation
+// breath rests. Ending early doesn't refund the day's break.
+async function startBreak() {
+  const prev = await getBreakState();
+  if (prev && prev.usedOn === todayKey()) {
+    return prev.until > Date.now()
+      ? { ok: true, until: prev.until }
+      : { ok: false, reason: 'used' };
+  }
+  const until = Date.now() + BREAK_MINUTES * 60 * 1000;
+  await setBreakState({ until, usedOn: todayKey() });
+  breakActive = true;
+  await rebuildRules();
+  chrome.alarms.create('miru-break-end', { when: until });
+  return { ok: true, until };
+}
+
+async function endBreak({ silent } = {}) {
+  const wasActive = breakActive;
+  const prev = await getBreakState();
+  if (prev && prev.until > Date.now()) await setBreakState({ ...prev, until: Date.now() });
+  breakActive = false;
+  chrome.alarms.clear('miru-break-end');
+  await rebuildRules();
+  if (wasActive && !silent) openBreathTab('breakEnd', settings.breathDuration || 15);
+}
+
 // --- Focus sessions ---------------------------------------------------------
 async function startSession({ name, duration }) {
   const startedAt = Date.now();
@@ -257,8 +338,10 @@ chrome.alarms.onAlarm.addListener(async (a) => {
   // The worker may have just woken for this alarm; make sure settings are fresh.
   await reloadSettings();
   if (a.name === 'miru-session-end') await endSession();
+  else if (a.name === 'miru-break-end') await endBreak();
   else if (a.name === 'miru-periodic') {
     if (!settings.periodicBreathEnabled) { chrome.alarms.clear('miru-periodic'); return; }
+    if (breakActive) return; // the break is a rest from the rhythm too
     // Don't pile up breath tabs while the user is away from the machine.
     let state = 'active';
     try { state = await chrome.idle.queryState(60); } catch (e) {}
@@ -266,9 +349,32 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     openBreathTab('periodic', settings.breathDuration || 15);
   } else if (a.name === 'miru-schedule') {
     await checkScheduled();
+    await checkTimeMirror();
     await rebuildRules(); // re-evaluate night-mode window
   }
 });
+
+// --- Time mirror --------------------------------------------------------------
+// A long unbroken stay on one domain meets a gentle notice — awareness, not
+// judgment. `tracker.start` marks when the current continuous stay began
+// (recordElapsed resets `since` for accounting but preserves `start`).
+async function checkTimeMirror() {
+  if (!settings.timeMirrorEnabled || breakActive) return;
+  const { tracker } = await chrome.storage.local.get('tracker');
+  if (!tracker || !tracker.domain || !tracker.start) return;
+  const thresholdMs = Math.max(5, settings.timeMirrorMinutes || 20) * 60000;
+  const anchor = tracker.mirrorAt || tracker.start;
+  if (Date.now() - anchor < thresholdMs) return;
+  // Only when the person is actually there.
+  let state = 'active';
+  try { state = await chrome.idle.queryState(60); } catch (e) {}
+  if (state !== 'active') return;
+  const minutes = Math.round((Date.now() - tracker.start) / 60000);
+  await chrome.storage.local.set({ tracker: { ...tracker, mirrorAt: Date.now() } });
+  openBreathTab('timeMirror', settings.breathDuration || 15, {
+    mirror: tracker.domain, minutes: String(minutes)
+  });
+}
 
 async function checkScheduled() {
   const sessions = settings.focusSessions || [];
@@ -284,10 +390,10 @@ async function checkScheduled() {
   }
 }
 
-// Standalone breath in its own tab (manual / periodic / session end).
-function openBreathTab(pool, duration) {
+// Standalone breath in its own tab (manual / periodic / session end / mirror).
+function openBreathTab(pool, duration, extra = {}) {
   const u = chrome.runtime.getURL('screens/breath.html') + '?' +
-    new URLSearchParams({ session: '1', pool, duration: String(duration), theme: settings.theme }).toString();
+    new URLSearchParams({ session: '1', pool, duration: String(duration), theme: settings.theme, ...extra }).toString();
   chrome.tabs.create({ url: u });
 }
 
@@ -310,7 +416,7 @@ async function recordElapsed() {
       while (days.length > 14) delete usage[days.shift()];
       await chrome.storage.local.set({ usage });
     }
-    await chrome.storage.local.set({ tracker: { domain: tracker.domain, since: now } });
+    await chrome.storage.local.set({ tracker: { ...tracker, since: now } });
   }
 }
 async function updateActive() {
@@ -325,7 +431,17 @@ async function updateActive() {
       }
     }
   } catch (e) {}
-  await chrome.storage.local.set({ tracker: domain ? { domain, since: Date.now() } : null });
+  if (!domain) { await chrome.storage.local.set({ tracker: null }); return; }
+  // Preserve the continuous-stay marker while the domain hasn't changed (the
+  // time mirror measures unbroken presence, not accumulated totals).
+  const { tracker: prev } = await chrome.storage.local.get('tracker');
+  const sameStay = prev && prev.domain === domain && prev.start;
+  await chrome.storage.local.set({ tracker: {
+    domain,
+    since: Date.now(),
+    start: sameStay ? prev.start : Date.now(),
+    mirrorAt: sameStay ? prev.mirrorAt : undefined
+  } });
 }
 chrome.windows.onFocusChanged.addListener((wid) => {
   if (wid === chrome.windows.WINDOW_ID_NONE) recordElapsed().then(() => chrome.storage.local.set({ tracker: null }));
@@ -361,6 +477,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         break;
       }
       case 'MIRU_BEGIN_BREATH': openBreathTab('periodic', msg.duration || 60); sendResponse({ ok: true }); break;
+      case 'MIRU_START_BREAK': sendResponse(await startBreak()); break;
+      case 'MIRU_END_BREAK': await endBreak({ silent: msg.silent }); sendResponse({ ok: true }); break;
       case 'MIRU_START_SESSION': sendResponse({ session: await startSession({ name: msg.name, duration: msg.duration }) }); break;
       case 'MIRU_END_SESSION': await endSession({ silent: msg.silent }); sendResponse({ ok: true }); break;
       case 'MIRU_CLOSE_TAB': {

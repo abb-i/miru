@@ -177,21 +177,6 @@ body.screen {
 }
 .ghost-btn:hover { border-color: var(--muted); color: var(--text); }
 
-.skip {
-  position: fixed;
-  bottom: 26px;
-  right: 28px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11px;
-  color: var(--muted);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.5s ease;
-  user-select: none;
-}
-.skip.show { opacity: 0.75; }
-.skip:hover { opacity: 1; color: var(--accent); }
-
 .bottom-pill {
   position: fixed;
   bottom: 28px;

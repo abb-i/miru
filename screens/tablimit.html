@@ -32,14 +32,10 @@
     }
 
     @keyframes mini-breathe {
-      0%, 100% { transform: scale(1);   opacity: 0.55; }
-      50%      { transform: scale(1.4); opacity: 1; }
+      0%, 100% { transform: scale(1);    opacity: 0.55; }
+      50%      { transform: scale(1.14); opacity: 1; }
     }
-    .mini-ring {
-      width: 40px; height: 40px; border-radius: 50%;
-      border: 1.5px solid var(--green-primary);
-      animation: mini-breathe 4s ease-in-out infinite;
-    }
+    .mini-fern { animation: mini-breathe 6s ease-in-out infinite; }
     .card .phrase { font-size: 22px; }
     .count { font-size: 13px; color: var(--muted); }
     .actions { display: flex; align-items: center; justify-content: center; gap: 1rem; margin-top: 0.25rem; flex-wrap: wrap; }
@@ -54,7 +50,10 @@
 <body class="screen">
   <div class="scrim" id="scrim">
     <div class="card">
-      <div class="mini-ring"></div>
+      <svg class="mini-fern" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="34" height="40">
+        <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+          stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.9" />
+      </svg>
       <div class="phrase" id="phrase"></div>
       <div class="count" id="count"></div>
       <div class="actions">
