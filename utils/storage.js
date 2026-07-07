@@ -2,7 +2,6 @@
 // Settings live in chrome.storage.sync; ephemeral session state in .local.
 
 const DEFAULTS = {
-  enabled: true,                     // master switch (Miru tending vs resting)
   navBreathEnabled: true,            // navigation breath before chosen domains
   breathMode: 'list',                // 'list' = only breathSites | 'all' = every new site (strict)
   breathSites: [],                   // domains that meet a breath first (list mode)
@@ -13,7 +12,7 @@ const DEFAULTS = {
   blockedSites: [],                  // array of domain strings
   blockDuringSessionsOnly: false,    // false = always block
   focusSessions: [],                 // array of {id, name, duration, days, startTime, enabled}
-  breathDuration: 15,                // seconds (rounded to whole breath cycles)
+  breathDuration: 10,                // seconds (rounded to whole breath cycles)
   breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
   timeMirrorEnabled: true,           // gentle notice after a long unbroken stay
   timeMirrorMinutes: 20,             // continuous minutes on one domain

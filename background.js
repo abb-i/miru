@@ -338,7 +338,7 @@ async function endBreak({ silent } = {}) {
   breakActive = false;
   chrome.alarms.clear('miru-break-end');
   await rebuildRules();
-  if (wasActive && !silent) openBreathTab('breakEnd', settings.breathDuration || 15);
+  if (wasActive && !silent) openBreathTab('breakEnd', settings.breathDuration || 10);
 }
 
 // --- Focus sessions ---------------------------------------------------------
@@ -372,7 +372,7 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     let state = 'active';
     try { state = await chrome.idle.queryState(60); } catch (e) {}
     if (state !== 'active') return;
-    openBreathTab('periodic', settings.breathDuration || 15);
+    openBreathTab('periodic', settings.breathDuration || 10);
   } else if (a.name === 'miru-schedule') {
     await checkScheduled();
     await checkTimeMirror();
@@ -397,7 +397,7 @@ async function checkTimeMirror() {
   if (state !== 'active') return;
   const minutes = Math.round((Date.now() - tracker.start) / 60000);
   await chrome.storage.local.set({ tracker: { ...tracker, mirrorAt: Date.now() } });
-  openBreathTab('timeMirror', settings.breathDuration || 15, {
+  openBreathTab('timeMirror', settings.breathDuration || 10, {
     mirror: tracker.domain, minutes: String(minutes)
   });
 }
