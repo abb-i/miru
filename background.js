@@ -416,11 +416,15 @@ async function checkScheduled() {
   }
 }
 
-// Standalone breath in its own tab (manual / periodic / session end / mirror).
+// Standalone breath (manual / periodic / session end / mirror): a fullscreen
+// window that holds the whole screen for the moment, then closes itself —
+// not another tab left behind to hoard. Falls back to a tab if the window
+// can't be created (some platforms restrict fullscreen popups).
 function openBreathTab(pool, duration, extra = {}) {
   const u = chrome.runtime.getURL('screens/breath.html') + '?' +
     new URLSearchParams({ session: '1', pool, duration: String(duration), theme: settings.theme, ...extra }).toString();
-  chrome.tabs.create({ url: u });
+  chrome.windows.create({ url: u, type: 'popup', state: 'fullscreen', focused: true })
+    .catch(() => chrome.tabs.create({ url: u }).catch(() => {}));
 }
 
 // --- Time tracking ----------------------------------------------------------

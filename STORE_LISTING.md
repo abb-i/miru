@@ -42,17 +42,17 @@ computer, so prompts don't pile up.
   the honest answer is that nothing is collected *by the developer*).
 - Data is **not** sold, **not** used for unrelated purposes, **not** transferred.
 - Remote code: **No** (all scripts, styles, and fonts are bundled).
-- Privacy policy URL: host `PRIVACY.md` (bilingual DE/EN, German authoritative;
-  e.g. the GitHub file URL) and paste that link.
+- Privacy policy URL: `https://github.com/abb-i/miru/blob/main/PRIVACY.md`
+  (bilingual DE/EN, German authoritative).
 
 ## German legal requirements (Impressumspflicht)
 
 - The full Impressum + Datenschutzerklärung are built into the extension
   (Settings → Legal, DE/EN toggle) and exist as `IMPRESSUM.md` / `PRIVACY.md`.
 - The Impressum must also be reachable from where the service is *offered*:
-  add a line at the end of the Chrome Web Store description, e.g.
-  `Impressum / Legal notice: <hosted IMPRESSUM.md URL>` — the listing itself
-  is a Telemedium and Abmahn-lawyers do check store pages.
+  add a line at the end of the Chrome Web Store description:
+  `Impressum / Legal notice: https://github.com/abb-i/miru/blob/main/IMPRESSUM.md`
+  — the listing itself is a Telemedium and Abmahn-lawyers do check store pages.
 - The in-extension Legal section satisfies "leicht erkennbar und unmittelbar
   erreichbar" (§ 5 DDG) for the extension itself.
 
