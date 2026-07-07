@@ -197,6 +197,37 @@ function bindControls() {
   document.getElementById('revisit-welcome').addEventListener('click', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('onboarding/onboarding.html') });
   });
+
+  // Feedback: opens the user's own mail app with the message prefilled —
+  // Miru itself sends nothing over the network.
+  const FEEDBACK_EMAIL = 'akadirdogan2727@gmail.com';
+  document.getElementById('feedback-send').addEventListener('click', () => {
+    const text = document.getElementById('feedback-text').value.trim();
+    const version = chrome.runtime.getManifest().version;
+    location.href = 'mailto:' + FEEDBACK_EMAIL +
+      '?subject=' + encodeURIComponent(`Miru feedback (v${version})`) +
+      '&body=' + encodeURIComponent(text);
+  });
+  document.getElementById('feedback-copy').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    try { await navigator.clipboard.writeText(FEEDBACK_EMAIL); } catch (err) { return; }
+    btn.textContent = 'copied — ' + FEEDBACK_EMAIL;
+    setTimeout(() => { btn.textContent = 'or copy my address'; }, 2600);
+  });
+
+  // Legal: language toggle (defaults to the browser's language) + About shortcut
+  const legalLang = (navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en';
+  selectPill('legal-lang-pills', 'lang', legalLang);
+  setLegalLang(legalLang);
+  bindPills('legal-lang-pills', 'lang', setLegalLang);
+  document.getElementById('open-legal').addEventListener('click', () => {
+    document.querySelector('.nav-item[data-target="sec-legal"]').click();
+    window.scrollTo(0, 0);
+  });
+}
+
+function setLegalLang(lang) {
+  document.querySelectorAll('.legal-lang').forEach((el) => { el.hidden = el.dataset.lang !== lang; });
 }
 
 function bindPills(containerId, attr, onPick) {

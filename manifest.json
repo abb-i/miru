@@ -32,7 +32,7 @@
   "options_page": "options/options.html",
   "web_accessible_resources": [
     {
-      "resources": ["screens/*", "assets/*", "utils/*"],
+      "resources": ["screens/*"],
       "matches": ["<all_urls>"]
     }
   ]

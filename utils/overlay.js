@@ -133,7 +133,8 @@
     const link = document.createElement('link');
     link.id = 'miru-fonts';
     link.rel = 'stylesheet';
-    link.href = 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=DM+Sans:wght@300;400&display=swap';
+    // Bundled locally — no network request, keeps "nothing leaves your device" true.
+    link.href = chrome.runtime.getURL('assets/fonts/fonts.css');
     (document.head || document.documentElement).appendChild(link);
   }
 
