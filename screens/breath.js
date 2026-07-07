@@ -16,13 +16,13 @@
   if (m) target = m[1];
 
   const stored = await chrome.storage.sync.get({
-    theme: 'dark', breathDuration: 15, breathPattern: 'settle', firstLightEnabled: true
+    theme: 'dark', breathDuration: 10, breathPattern: 'settle', firstLightEnabled: true
   });
   const theme = params.get('theme') || stored.theme;
   const resolved = theme === 'auto'
     ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
     : (theme || 'dark');
-  const duration = Number(params.get('duration')) || stored.breathDuration || 15;
+  const duration = Number(params.get('duration')) || stored.breathDuration || 10;
   let pool = params.get('pool') || (target ? 'navigation' : 'periodic');
 
   // Time mirror context (a long unbroken stay on one domain).

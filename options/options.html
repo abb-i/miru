@@ -19,9 +19,9 @@
         <span class="wordmark">miru</span>
       </div>
       <nav class="nav">
-        <button class="nav-item active" data-target="sec-blocked">Blocked Sites</button>
+        <button class="nav-item active" data-target="sec-breath">Breathing</button>
+        <button class="nav-item" data-target="sec-blocked">Blocked Sites</button>
         <button class="nav-item" data-target="sec-tabs">Tab Limit</button>
-        <button class="nav-item" data-target="sec-breath">Breathing</button>
         <button class="nav-item" data-target="sec-sessions">Focus Sessions</button>
         <button class="nav-item" data-target="sec-break">Break</button>
         <button class="nav-item" data-target="sec-appearance">Appearance</button>
@@ -86,9 +86,9 @@
       </section>
 
       <!-- Blocked Sites -->
-      <section class="section active" id="sec-blocked">
+      <section class="section" id="sec-blocked">
         <h2 class="heading">Blocked Sites</h2>
-        <p class="sub">What needs protecting? These sites meet a calm pause instead.</p>
+        <p class="sub">What needs protecting? These sites meet a calm, firm no instead of loading. For a gentler pause, add them to the breath instead.</p>
 
         <div class="card">
           <form class="field-row inline" id="block-form">
@@ -131,7 +131,7 @@
           <div class="toggle-row">
             <div>
               <div class="toggle-title">Enable tab limit</div>
-              <div class="toggle-desc">Opening beyond this limit will show a breathing pause.</div>
+              <div class="toggle-desc">Opening beyond this limit meets a gentle question first — close a tab, or continue knowingly.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="tab-enabled" />
@@ -146,7 +146,7 @@
       </section>
 
       <!-- Breathing -->
-      <section class="section" id="sec-breath">
+      <section class="section active" id="sec-breath">
         <h2 class="heading">Breathing</h2>
         <p class="sub">A breath before the places that pull at you, and gentle returns while you work.</p>
 
@@ -161,16 +161,6 @@
               <span class="slider"></span>
             </label>
           </div>
-          <div class="field">
-            <label>Length of the pause</label>
-            <div class="pills" id="breath-len-pills">
-              <button class="pill" data-len="10">one breath</button>
-              <button class="pill" data-len="25">two breaths</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
           <div class="field">
             <label>Where the breath lives</label>
             <div class="pills" id="breath-mode-pills">
@@ -195,13 +185,43 @@
         <div class="card">
           <div>
             <div class="toggle-title">The breath itself</div>
-            <div class="toggle-desc">The pattern every pause follows.</div>
+            <div class="toggle-desc">The shape and length every pause follows.</div>
           </div>
           <div class="field">
+            <label>Pattern</label>
             <div class="pills" id="pattern-pills">
               <button class="pill" data-pattern="settle" title="A steady, exhale-weighted breath.">Settle · in 4 — hold 3 — out 6</button>
               <button class="pill" data-pattern="sigh" title="Two inhales, one long exhale — the fastest way the body knows to settle.">Sigh · in — in again — long out</button>
               <button class="pill" data-pattern="box" title="Equal sides, like the walls of a quiet room.">Box · 4 — 4 — 4 — 4</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Length</label>
+            <div class="pills" id="breath-len-pills">
+              <button class="pill" data-len="10">one breath</button>
+              <button class="pill" data-len="25">two breaths</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-row">
+            <div>
+              <div class="toggle-title">Periodic breath</div>
+              <div class="toggle-desc">A brief return to the present, on a steady rhythm as you browse.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="periodic-breath" />
+              <span class="slider"></span>
+            </label>
+          </div>
+          <div class="field">
+            <label>Interval</label>
+            <div class="pills" id="interval-pills">
+              <button class="pill" data-int="10">every 10m</button>
+              <button class="pill" data-int="15">every 15m</button>
+              <button class="pill" data-int="20">every 20m</button>
+              <button class="pill" data-int="30">every 30m</button>
             </div>
           </div>
         </div>
@@ -238,28 +258,6 @@
               <input type="checkbox" id="firstlight-enabled" />
               <span class="slider"></span>
             </label>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-title">Periodic breath</div>
-              <div class="toggle-desc">A brief return to the present, on a steady rhythm as you browse.</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="periodic-breath" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="field">
-            <label>Interval</label>
-            <div class="pills" id="interval-pills">
-              <button class="pill" data-int="10">every 10m</button>
-              <button class="pill" data-int="15">every 15m</button>
-              <button class="pill" data-int="20">every 20m</button>
-              <button class="pill" data-int="30">every 30m</button>
-            </div>
           </div>
         </div>
 
