@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Local tooling config (machine-specific)
+.claude/
+
+# Release packages — attach zips to GitHub Releases instead
+dist/
+
+# Personal working notes
+LAUNCH_CHECKLIST.md

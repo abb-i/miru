@@ -229,11 +229,17 @@ chrome.storage.onChanged.addListener(async (c, area) => {
 });
 
 // --- Allow-once (post-breath continue) --------------------------------------
-async function allowOnce(tabId) {
+// Scoped to the destination's domain: the pass outranks even block rules, so an
+// unscoped one would let the tab reach any blocked site until the page settles.
+// IPs can't go in requestDomains — those fall back to the plain tab-wide pass.
+async function allowOnce(tabId, targetUrl) {
   const id = RID_ALLOWONCE_BASE + tabId;
+  const condition = { tabIds: [tabId], resourceTypes: ['main_frame'] };
+  const dom = targetUrl ? getRootDomain(targetUrl) : '';
+  if (dom && !/^[\d.]+$/.test(dom) && !dom.includes(':')) condition.requestDomains = [dom];
   await DNR.updateSessionRules({
     removeRuleIds: [id],
-    addRules: [{ id, priority: 100, action: { type: 'allow' }, condition: { tabIds: [tabId], resourceTypes: ['main_frame'] } }]
+    addRules: [{ id, priority: 100, action: { type: 'allow' }, condition }]
   }).catch((e) => console.warn('[Miru] allowOnce', e));
   setTimeout(() => DNR.updateSessionRules({ removeRuleIds: [id] }).catch(() => {}), 15000);
 }
@@ -460,7 +466,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     switch (msg.type) {
       case 'MIRU_CONTINUE': {
         const id = msg.tabId || (sender.tab && sender.tab.id);
-        if (id != null) await allowOnce(id);
+        if (id != null) await allowOnce(id, msg.target);
         sendResponse({ ok: true });
         break;
       }

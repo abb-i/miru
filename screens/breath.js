@@ -51,7 +51,8 @@
 
   async function goToTarget() {
     // Ask the worker to let this exact tab through once (so DNR doesn't re-breathe).
-    try { await chrome.runtime.sendMessage({ type: 'MIRU_CONTINUE' }); } catch (e) {}
+    // The target scopes the pass to that domain only.
+    try { await chrome.runtime.sendMessage({ type: 'MIRU_CONTINUE', target }); } catch (e) {}
     location.replace(target);
   }
 
