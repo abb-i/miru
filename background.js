@@ -51,13 +51,33 @@ async function rebuildRules() {
   const add = [];
 
   if (settings.navBreathEnabled && !breakActive) {
-    add.push({
-      id: RID_BREATH, priority: 1,
-      action: { type: 'redirect', redirect: { regexSubstitution: breathUrl + '?target=\\0' } },
-      // GET only: a cross-site POST (bank 3-D Secure, SSO form_post) carries a
-      // body that a redirect-then-continue would silently drop.
-      condition: { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], requestMethods: ['get'], excludedRequestDomains: excludedDNR() }
-    });
+    // GET only: a cross-site POST (bank 3-D Secure, SSO form_post) carries a
+    // body that a redirect-then-continue would silently drop.
+    const base = { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], requestMethods: ['get'] };
+    let condition = null;
+    if (settings.breathMode === 'all') {
+      // Strict mode: every new http(s) place except the exclusions.
+      condition = { ...base, excludedRequestDomains: excludedDNR() };
+    } else {
+      // Default: only the places the user chose. ALWAYS_EXCLUDED deliberately
+      // does not apply — a chosen site (e.g. youtube.com) must win over it.
+      const sites = [...new Set((settings.breathSites || []).map(cleanDomain))]
+        .filter((d) => d && !/^[\d.]+$/.test(d) && !d.includes(':'));
+      if (sites.length) {
+        condition = { ...base, requestDomains: sites };
+        // Same carve-out logic as blocking: keep studio.youtube.com breath-free
+        // while youtube.com breathes, when the user kept it as an exception.
+        const carve = customExceptionsDNR().filter((e) => sites.some((s) => e === s || e.endsWith('.' + s)));
+        if (carve.length) condition.excludedRequestDomains = carve;
+      }
+    }
+    if (condition) {
+      add.push({
+        id: RID_BREATH, priority: 1,
+        action: { type: 'redirect', redirect: { regexSubstitution: breathUrl + '?target=\\0' } },
+        condition
+      });
+    }
   }
 
   if (settings.nightModeEnabled && isNightTime(settings)) {

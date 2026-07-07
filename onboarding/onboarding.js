@@ -6,6 +6,7 @@
 (() => {
   const state = {
     why: null,
+    placesAction: 'breathe', // what the chosen places meet: a breath, or a block
     blocked: new Set(),
     breath: 10,          // seconds → rounded to whole cycles by the overlay
     tab: 3,              // 0 = no limit
@@ -96,6 +97,12 @@
     });
   }
   $$('#place-pills .pill').forEach(bindPlacePill);
+
+  $$('#place-action .pill').forEach((p) => p.addEventListener('click', () => {
+    $$('#place-action .pill').forEach((x) => x.classList.remove('selected'));
+    p.classList.add('selected');
+    state.placesAction = p.dataset.action;
+  }));
 
   $('#no-places').addEventListener('click', () => {
     state.blocked.clear();
@@ -189,7 +196,13 @@
     };
     if (state.tab > 0) payload.tabLimit = state.tab;
     if (state.periodic > 0) payload.periodicBreathInterval = state.periodic;
-    if (state.blocked.size) payload.blockedSites = [...state.blocked];
+    // The chosen places land on the list the user picked: breath (gentle,
+    // default) or block (firm). breathMode stays 'list' — strict "every new
+    // site" is an explicit opt-in from settings.
+    if (state.blocked.size) {
+      if (state.placesAction === 'block') payload.blockedSites = [...state.blocked];
+      else payload.breathSites = [...state.blocked];
+    }
     try { await chrome.storage.sync.set(payload); } catch (e) {}
   }
 

@@ -1,13 +1,13 @@
-# Chrome Web Store — submission notes for Miru v1.1.0
+# Chrome Web Store — submission notes for Miru v1.2.0
 
 Everything the dashboard will ask for, ready to paste.
 
 ## Single purpose description
 
 Miru is a mindful-browsing companion: it places a brief guided breath before
-distracting navigation, lets users block chosen sites, limits open tabs, and
-offers focus sessions and a nightly quiet period. All features serve the single
-purpose of intentional, calmer browsing.
+sites the user marks as distracting, lets users block chosen sites, limits
+open tabs, and offers focus sessions and a nightly quiet period. All features
+serve the single purpose of intentional, calmer browsing.
 
 ## Permission justifications
 
@@ -15,10 +15,10 @@ purpose of intentional, calmer browsing.
 extension's own breathing pause, block page, or night page, according to the
 user's settings. No request data is read or modified beyond these redirects.
 
-**host_permissions (`<all_urls>`)** — Users may block or pause any site they
-choose, and the pre-navigation breath applies to whichever domains the user
-browses; the redirect rules therefore need to be able to match any host. No
-page content is read or altered.
+**host_permissions (`<all_urls>`)** — Users may block or add a breathing pause
+to any site they choose (plus an optional strict mode that breathes before
+every new domain); the redirect rules therefore need to be able to match any
+host. No page content is read or altered.
 
 **tabs** — Used to (1) count open tabs for the user's tab limit, (2) know which
 site is active so the popup can show today's per-site time, (3) redirect a tab
@@ -58,8 +58,8 @@ computer, so prompts don't pile up.
 
 ## Listing copy (short description, 132-char limit)
 
-Browse with intention. A breath before every new place, gentle site blocking,
-tab limits, focus sessions, and quiet nights.
+Browse with intention. A breath before the sites that pull at you, gentle
+blocking, tab limits, focus sessions, quiet nights.
 
 ## Reviewer notes (optional but speeds review)
 

@@ -12,6 +12,21 @@ const ALWAYS_EXCLUDED = [
   'localhost', '127.0.0.1'
 ];
 
+// Opt-in suggestions for the breath list — commonly distracting places, offered
+// as pills the user actively taps. Never activated without that choice.
+const COMMONLY_DISTRACTING = [
+  { domain: 'instagram.com', label: 'Instagram' },
+  { domain: 'tiktok.com', label: 'TikTok' },
+  { domain: 'youtube.com', label: 'YouTube' },
+  { domain: 'x.com', label: 'X' },
+  { domain: 'reddit.com', label: 'Reddit' },
+  { domain: 'facebook.com', label: 'Facebook' },
+  { domain: 'twitch.tv', label: 'Twitch' },
+  { domain: 'netflix.com', label: 'Netflix' },
+  { domain: 'pinterest.com', label: 'Pinterest' },
+  { domain: 'linkedin.com', label: 'LinkedIn' }
+];
+
 // URL schemes Miru must never touch.
 const EXCLUDED_SCHEMES = ['chrome:', 'chrome-extension:', 'about:', 'edge:', 'brave:', 'devtools:', 'view-source:'];
 
@@ -103,5 +118,5 @@ function isBlocked(url, blockedList = []) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ALWAYS_EXCLUDED, isExcluded, getRootDomain, isNewDomain, isBlocked };
+  module.exports = { ALWAYS_EXCLUDED, COMMONLY_DISTRACTING, isExcluded, getRootDomain, isNewDomain, isBlocked };
 }
