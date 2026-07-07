@@ -47,6 +47,10 @@ async function loadAll() {
 
   // Breathing
   document.getElementById('nav-breath').checked = s.navBreathEnabled;
+  selectPill('breath-mode-pills', 'mode', s.breathMode || 'list');
+  applyBreathMode(s.breathMode || 'list');
+  renderBreathList(s.breathSites || []);
+  renderBreathSuggestions(s.breathSites || []);
   selectPill('breath-len-pills', 'len', s.breathDuration <= 15 ? 10 : 25);
   selectPill('pattern-pills', 'pattern', s.breathPattern);
   document.getElementById('periodic-breath').checked = s.periodicBreathEnabled;
@@ -131,6 +135,17 @@ function bindControls() {
   // Breathing
   document.getElementById('nav-breath').addEventListener('change', async (e) => {
     await saveSetting('navBreathEnabled', e.target.checked); flashSaved();
+  });
+  bindPills('breath-mode-pills', 'mode', async (val) => {
+    await saveSetting('breathMode', val); applyBreathMode(val); flashSaved();
+  });
+  document.getElementById('breath-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = document.getElementById('breath-input');
+    const val = normalizeDomain(input.value);
+    if (!val) return;
+    await addBreathSite(val);
+    input.value = '';
   });
   bindPills('breath-len-pills', 'len', async (val) => {
     await saveSetting('breathDuration', Number(val)); flashSaved();
@@ -265,6 +280,74 @@ function renderBlockList(sites) {
       renderBlockList(next);
       flashSaved();
     });
+    li.append(span, btn);
+    list.appendChild(li);
+  });
+}
+
+// ---- Breath sites (where the navigation breath lives) ------------------------
+function applyBreathMode(mode) {
+  document.getElementById('breath-sites-ui').hidden = mode === 'all';
+  document.getElementById('breath-mode-desc').textContent = mode === 'all'
+    ? 'Strict: every new domain begins with a breath. Checkouts and banks included — choose knowingly.'
+    : 'The breath greets only the places you name here. Everything else loads freely.';
+}
+
+async function addBreathSite(domain) {
+  const s = await getSettings();
+  const list = s.breathSites || [];
+  if (!list.includes(domain)) {
+    list.push(domain);
+    await saveSetting('breathSites', list);
+    renderBreathList(list);
+    renderBreathSuggestions(list);
+    flashSaved();
+  }
+}
+
+async function removeBreathSite(domain) {
+  const s = await getSettings();
+  const next = (s.breathSites || []).filter(d => d !== domain);
+  await saveSetting('breathSites', next);
+  renderBreathList(next);
+  renderBreathSuggestions(next);
+  flashSaved();
+}
+
+// Suggestion pills come from COMMONLY_DISTRACTING (utils/domains.js). A pill
+// already on the list shows selected; tapping toggles membership.
+function renderBreathSuggestions(current) {
+  const wrap = document.getElementById('breath-suggest-pills');
+  wrap.innerHTML = '';
+  COMMONLY_DISTRACTING.forEach(({ domain, label }) => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'pill' + (current.includes(domain) ? ' selected' : '');
+    pill.textContent = label;
+    pill.addEventListener('click', () =>
+      current.includes(domain) ? removeBreathSite(domain) : addBreathSite(domain));
+    wrap.appendChild(pill);
+  });
+}
+
+function renderBreathList(sites) {
+  const list = document.getElementById('breath-list');
+  list.innerHTML = '';
+  if (!sites.length) {
+    const note = document.createElement('div');
+    note.className = 'empty-note';
+    note.textContent = 'No places named yet — the breath is resting.';
+    list.appendChild(note);
+    return;
+  }
+  sites.forEach(site => {
+    const li = document.createElement('li');
+    const span = document.createElement('span');
+    span.textContent = site;
+    const btn = document.createElement('button');
+    btn.className = 'remove';
+    btn.textContent = '×';
+    btn.addEventListener('click', () => removeBreathSite(site));
     li.append(span, btn);
     list.appendChild(li);
   });

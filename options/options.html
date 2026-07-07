@@ -148,13 +148,13 @@
       <!-- Breathing -->
       <section class="section" id="sec-breath">
         <h2 class="heading">Breathing</h2>
-        <p class="sub">A breath before each new place, and gentle returns while you work.</p>
+        <p class="sub">A breath before the places that pull at you, and gentle returns while you work.</p>
 
         <div class="card">
           <div class="toggle-row">
             <div>
               <div class="toggle-title">Navigation breath</div>
-              <div class="toggle-desc">A pause before entering a new domain. It always completes its full cycle.</div>
+              <div class="toggle-desc">A pause before entering a chosen place. It always completes its full cycle.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="nav-breath" />
@@ -167,6 +167,28 @@
               <button class="pill" data-len="10">one breath</button>
               <button class="pill" data-len="25">two breaths</button>
             </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="field">
+            <label>Where the breath lives</label>
+            <div class="pills" id="breath-mode-pills">
+              <button class="pill" data-mode="list">sites I choose</button>
+              <button class="pill" data-mode="all">every new site</button>
+            </div>
+            <div class="toggle-desc" id="breath-mode-desc"></div>
+          </div>
+          <div class="breath-sites" id="breath-sites-ui">
+            <div class="field">
+              <label>Commonly distracting — tap to add</label>
+              <div class="pills" id="breath-suggest-pills"></div>
+            </div>
+            <form class="field-row inline" id="breath-form">
+              <input type="text" id="breath-input" placeholder="another place, e.g. news.com" />
+              <button type="submit" class="cta narrow">Add a breath.</button>
+            </form>
+            <ul class="site-list" id="breath-list"></ul>
           </div>
         </div>
 

@@ -3,7 +3,9 @@
 
 const DEFAULTS = {
   enabled: true,                     // master switch (Miru tending vs resting)
-  navBreathEnabled: true,            // navigation breath before new domains
+  navBreathEnabled: true,            // navigation breath before chosen domains
+  breathMode: 'list',                // 'list' = only breathSites | 'all' = every new site (strict)
+  breathSites: [],                   // domains that meet a breath first (list mode)
   tabLimit: 3,
   tabLimitEnabled: true,
   periodicBreathEnabled: true,

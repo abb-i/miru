@@ -8,8 +8,11 @@ notice where you're going before you arrive.
 
 ## What it does
 
-- **Navigation breath** — before you land on a new site, an unfurling fern
-  guides one calm breath. Then you choose: continue, or go back.
+- **Navigation breath** — before you land on a site *you've marked as
+  distracting*, an unfurling fern guides one calm breath. Then you choose:
+  continue, or go back. Everything else — checkouts, banks, work — loads
+  untouched. (A strict mode that breathes before every new site is available
+  for those who want it.)
 - **Gentle site blocking** — block the places that pull at you, always or only
   during focus sessions. A calm page, not a scolding one.
 - **Tab limit** — a quiet question when tabs multiply: go deep, not wide.
