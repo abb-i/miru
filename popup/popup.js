@@ -25,8 +25,8 @@ async function renderIntention() {
   document.getElementById('intention').hidden = false;
 }
 
-// Show a guided breath over the current page; fall back to a dedicated tab
-// Opens a guided breath in its own tab (a real extension page).
+// Opens a guided breath in a fullscreen window of its own; it closes itself
+// when the breath completes.
 async function beginBreath() {
   await chrome.runtime.sendMessage({ type: 'MIRU_BEGIN_BREATH', duration: SESSION_SECONDS })
     .catch(() => {});
