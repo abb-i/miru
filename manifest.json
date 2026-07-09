@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Miru",
-  "version": "1.2.0",
-  "description": "Browse with intention. A gentle breath before the places that pull at you.",
+  "version": "2.0.0",
+  "description": "Browse with intention. A gentle breath before the places that pull at you, and calmer feeds inside.",
   "permissions": [
     "declarativeNetRequest",
     "tabs",

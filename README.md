@@ -8,25 +8,31 @@ notice where you're going before you arrive.
 
 ## What it does
 
-- **Navigation breath** — before you land on a site *you've marked as
-  distracting*, an unfurling fern guides one calm breath. Then you choose:
-  continue, or go back. Everything else — checkouts, banks, work — loads
-  untouched. (A strict mode that breathes before every new site is available
-  for those who want it.)
-- **Gentle site blocking** — block the places that pull at you, always or only
-  during focus sessions. A calm page, not a scolding one — and not a dead end:
-  up to three times a day you can choose to stay five minutes, then the block
-  returns.
-- **Tab limit** — a quiet question when tabs multiply: go deep, not wide.
-- **Focus sessions** — scheduled or on demand, with your blocked list enforced.
+You name the places that pull at you, and give each a **posture** — how Miru
+meets you at its door. Everything unlisted loads untouched: checkouts, banks,
+work.
+
+- **Breathe** — before you land there, an unfurling fern guides one calm
+  breath. Then you choose: continue, or go back.
+- **Calm** — the breath, and a quieter room behind it. On YouTube and
+  Instagram the algorithmic pull rests — home feed, Shorts, Reels, Explore,
+  the recommendation column — while search, messages, profiles, and the video
+  you came for keep working. On sites without a calm pack, calm simply
+  breathes.
+- **Block** — a calm page, not a scolding one — and not a dead end: up to
+  three times a day you can choose to stay five minutes, landing in the calm
+  room where one exists, and the block returns when time is up.
+
+Around the postures:
+
+- **Focus sessions** — begin 25 or 50 minutes from the popup; optionally,
+  blocking holds only while a session runs.
 - **Periodic breath & time mirror** — a soft reminder to surface after a while,
   and a gentle notice when you've been in one place a long time. Breaths appear
   as a calm overlay on the page you're already on, at a natural pause (a tab
   switch, a finished navigation) — not as another window cutting in.
 - **Night mode** — the browser rests when you should.
 - **First light** — the first breath of the day asks for one word to carry.
-- **One daily break** — 30 minutes where everything opens again. Honest, not
-  infinite.
 
 ## Privacy — verify it yourself
 
@@ -41,6 +47,10 @@ This repository is public so you don't have to take our word for it:
 - The breathing overlay is drawn by the extension's own bundled script
   (`utils/overlay.js`); it reads nothing from the page it appears on and
   removes itself when the breath ends.
+- Calm mode hides feed elements with bundled CSS (`utils/calm.js` — selectors
+  as data, one file), injected only on the sites *you* set to calm. It reads
+  no page content; its only writing is a local flag when a selector stops
+  matching, so options can say a pack has gone stale.
 
 Full details: [Privacy policy](PRIVACY.md) · [Impressum / Legal notice](IMPRESSUM.md)
 
