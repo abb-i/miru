@@ -36,17 +36,13 @@ function flashSaved() {
 async function loadAll() {
   const s = await getSettings();
 
-  // Blocked sites
+  // Places
   document.getElementById('block-during-only').checked = s.blockDuringSessionsOnly;
-  renderBlockList(s.blockedSites);
+  renderPlaces(s.places || []);
+  renderPlaceSuggestions(s.places || []);
   renderAllowList(s.customExcludedDomains);
 
   // Breathing
-  document.getElementById('nav-breath').checked = s.navBreathEnabled;
-  selectPill('breath-mode-pills', 'mode', s.breathMode || 'list');
-  applyBreathMode(s.breathMode || 'list');
-  renderBreathList(s.breathSites || []);
-  renderBreathSuggestions(s.breathSites || []);
   selectPill('breath-len-pills', 'len', s.breathDuration <= 15 ? 10 : 25);
   selectPill('pattern-pills', 'pattern', s.breathPattern);
   document.getElementById('periodic-breath').checked = s.periodicBreathEnabled;
@@ -74,19 +70,12 @@ function selectPill(containerId, attr, value) {
 
 // ---- Bind controls ----------------------------------------------------------
 function bindControls() {
-  // Blocked: add
-  document.getElementById('block-form').addEventListener('submit', async (e) => {
+  // Places: add (a new place starts gentle — posture 'breathe')
+  document.getElementById('place-form').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const input = document.getElementById('block-input');
+    const input = document.getElementById('place-input');
     const val = normalizeDomain(input.value);
-    if (!val) return;
-    const s = await getSettings();
-    if (!s.blockedSites.includes(val)) {
-      s.blockedSites.push(val);
-      await saveSetting('blockedSites', s.blockedSites);
-      renderBlockList(s.blockedSites);
-      flashSaved();
-    }
+    if (val) await addPlace(val);
     input.value = '';
   });
 
@@ -113,20 +102,6 @@ function bindControls() {
   });
 
   // Breathing
-  document.getElementById('nav-breath').addEventListener('change', async (e) => {
-    await saveSetting('navBreathEnabled', e.target.checked); flashSaved();
-  });
-  bindPills('breath-mode-pills', 'mode', async (val) => {
-    await saveSetting('breathMode', val); applyBreathMode(val); flashSaved();
-  });
-  document.getElementById('breath-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = document.getElementById('breath-input');
-    const val = normalizeDomain(input.value);
-    if (!val) return;
-    await addBreathSite(val);
-    input.value = '';
-  });
   bindPills('breath-len-pills', 'len', async (val) => {
     await saveSetting('breathDuration', Number(val)); flashSaved();
   });
@@ -214,100 +189,88 @@ function bindPills(containerId, attr, onPick) {
   });
 }
 
-// ---- Blocked list rendering -------------------------------------------------
-function renderBlockList(sites) {
-  const list = document.getElementById('block-list');
-  list.innerHTML = '';
-  if (!sites.length) {
-    const note = document.createElement('div');
-    note.className = 'empty-note';
-    note.textContent = 'Nothing planted yet.';
-    list.appendChild(note);
-    return;
-  }
-  sites.forEach(site => {
-    const li = document.createElement('li');
-    const span = document.createElement('span');
-    span.textContent = site;
-    const btn = document.createElement('button');
-    btn.className = 'remove';
-    btn.textContent = '×';
-    btn.addEventListener('click', async () => {
-      const s = await getSettings();
-      const next = s.blockedSites.filter(d => d !== site);
-      await saveSetting('blockedSites', next);
-      renderBlockList(next);
-      flashSaved();
-    });
-    li.append(span, btn);
-    list.appendChild(li);
-  });
-}
+// ---- Places (one list, each with a posture) -----------------------------------
+const POSTURES = [
+  { key: 'breathe', label: 'breathe' },
+  { key: 'calm', label: 'calm' },
+  { key: 'block', label: 'block' }
+];
 
-// ---- Breath sites (where the navigation breath lives) ------------------------
-function applyBreathMode(mode) {
-  document.getElementById('breath-sites-ui').hidden = mode === 'all';
-  document.getElementById('breath-mode-desc').textContent = mode === 'all'
-    ? 'Strict: every new domain begins with a breath. Checkouts and banks included — choose knowingly.'
-    : 'The breath greets only the places you name here. Everything else loads freely.';
-}
-
-async function addBreathSite(domain) {
-  const s = await getSettings();
-  const list = s.breathSites || [];
-  if (!list.includes(domain)) {
-    list.push(domain);
-    await saveSetting('breathSites', list);
-    renderBreathList(list);
-    renderBreathSuggestions(list);
-    flashSaved();
-  }
-}
-
-async function removeBreathSite(domain) {
-  const s = await getSettings();
-  const next = (s.breathSites || []).filter(d => d !== domain);
-  await saveSetting('breathSites', next);
-  renderBreathList(next);
-  renderBreathSuggestions(next);
+async function savePlaces(next) {
+  await saveSetting('places', next);
+  renderPlaces(next);
+  renderPlaceSuggestions(next);
   flashSaved();
+}
+
+async function addPlace(domain, posture = 'breathe') {
+  const s = await getSettings();
+  const places = s.places || [];
+  if (places.some(p => p.domain === domain)) return;
+  await savePlaces([...places, { domain, posture }]);
+}
+
+async function removePlace(domain) {
+  const s = await getSettings();
+  await savePlaces((s.places || []).filter(p => p.domain !== domain));
+}
+
+async function setPosture(domain, posture) {
+  const s = await getSettings();
+  await savePlaces((s.places || []).map(p => p.domain === domain ? { ...p, posture } : p));
 }
 
 // Suggestion pills come from COMMONLY_DISTRACTING (utils/domains.js). A pill
 // already on the list shows selected; tapping toggles membership.
-function renderBreathSuggestions(current) {
-  const wrap = document.getElementById('breath-suggest-pills');
+function renderPlaceSuggestions(places) {
+  const wrap = document.getElementById('place-suggest-pills');
+  const listed = new Set(places.map(p => p.domain));
   wrap.innerHTML = '';
   COMMONLY_DISTRACTING.forEach(({ domain, label }) => {
     const pill = document.createElement('button');
     pill.type = 'button';
-    pill.className = 'pill' + (current.includes(domain) ? ' selected' : '');
+    pill.className = 'pill' + (listed.has(domain) ? ' selected' : '');
     pill.textContent = label;
     pill.addEventListener('click', () =>
-      current.includes(domain) ? removeBreathSite(domain) : addBreathSite(domain));
+      listed.has(domain) ? removePlace(domain) : addPlace(domain));
     wrap.appendChild(pill);
   });
 }
 
-function renderBreathList(sites) {
-  const list = document.getElementById('breath-list');
+function renderPlaces(places) {
+  const list = document.getElementById('place-list');
   list.innerHTML = '';
-  if (!sites.length) {
+  if (!places.length) {
     const note = document.createElement('div');
     note.className = 'empty-note';
-    note.textContent = 'No places named yet — the breath is resting.';
+    note.textContent = 'No places named yet — everything loads freely.';
     list.appendChild(note);
     return;
   }
-  sites.forEach(site => {
+  places.forEach(({ domain, posture }) => {
     const li = document.createElement('li');
+    li.className = 'place-row';
     const span = document.createElement('span');
-    span.textContent = site;
+    span.className = 'place-domain';
+    span.textContent = domain;
+
+    const seg = document.createElement('div');
+    seg.className = 'posture-pills';
+    POSTURES.forEach(({ key, label }) => {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'pill small' + (posture === key ? ' selected' : '');
+      pill.textContent = label;
+      pill.addEventListener('click', () => { if (posture !== key) setPosture(domain, key); });
+      seg.appendChild(pill);
+    });
+
     const btn = document.createElement('button');
     btn.className = 'remove';
     btn.textContent = '×';
-    btn.addEventListener('click', () => removeBreathSite(site));
-    li.append(span, btn);
+    btn.addEventListener('click', () => removePlace(domain));
+
+    li.append(span, seg, btn);
     list.appendChild(li);
   });
 }

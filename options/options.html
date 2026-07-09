@@ -19,8 +19,9 @@
         <span class="wordmark">miru</span>
       </div>
       <nav class="nav">
-        <button class="nav-item active" data-target="sec-breath">Breathing</button>
-        <button class="nav-item" data-target="sec-blocked">Blocked Sites</button>
+        <button class="nav-item active" data-target="sec-places">Places</button>
+        <button class="nav-item" data-target="sec-breath">Breathing</button>
+        <button class="nav-item" data-target="sec-night">Night</button>
         <button class="nav-item" data-target="sec-appearance">Appearance</button>
         <button class="nav-item" data-target="sec-about">About</button>
         <button class="nav-item" data-target="sec-legal">Legal</button>
@@ -31,17 +32,22 @@
     <!-- Content -->
     <main class="content">
 
-      <!-- Blocked Sites -->
-      <section class="section" id="sec-blocked">
-        <h2 class="heading">Blocked Sites</h2>
-        <p class="sub">What needs protecting? These sites meet a calm, firm no instead of loading. For a gentler pause, add them to the breath instead.</p>
+      <!-- Places -->
+      <section class="section active" id="sec-places">
+        <h2 class="heading">Places</h2>
+        <p class="sub">The places that pull at you, and how Miru meets you at each door. Everything unlisted loads untouched.</p>
 
         <div class="card">
-          <form class="field-row inline" id="block-form">
-            <input type="text" id="block-input" placeholder="plant a site, e.g. news.com" />
-            <button type="submit" class="cta narrow">Plant a blocker.</button>
+          <div class="field">
+            <label>Commonly distracting — tap to add</label>
+            <div class="pills" id="place-suggest-pills"></div>
+          </div>
+          <form class="field-row inline" id="place-form">
+            <input type="text" id="place-input" placeholder="another place, e.g. news.com" />
+            <button type="submit" class="cta narrow">Add the place.</button>
           </form>
-          <ul class="site-list" id="block-list"></ul>
+          <ul class="site-list place-list" id="place-list"></ul>
+          <div class="toggle-desc posture-legend"><strong>breathe</strong> asks one calm breath at the door · <strong>calm</strong> also quiets the feeds inside (YouTube &amp; Instagram — elsewhere it simply breathes) · <strong>block</strong> holds the door, with three five-minute stays a day</div>
         </div>
 
         <div class="card">
@@ -58,7 +64,7 @@
           <div class="toggle-row">
             <div>
               <div class="toggle-title">Only block during focus sessions</div>
-              <div class="toggle-desc">When off, blocked sites are always tended.</div>
+              <div class="toggle-desc">When off, places set to block are always tended.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="block-during-only" />
@@ -69,41 +75,9 @@
       </section>
 
       <!-- Breathing -->
-      <section class="section active" id="sec-breath">
+      <section class="section" id="sec-breath">
         <h2 class="heading">Breathing</h2>
-        <p class="sub">A breath before the places that pull at you, and gentle returns while you work.</p>
-
-        <div class="card">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-title">Navigation breath</div>
-              <div class="toggle-desc">A pause before entering a chosen place. It always completes its full cycle.</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="nav-breath" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="field">
-            <label>Where the breath lives</label>
-            <div class="pills" id="breath-mode-pills">
-              <button class="pill" data-mode="list">sites I choose</button>
-              <button class="pill" data-mode="all">every new site</button>
-            </div>
-            <div class="toggle-desc" id="breath-mode-desc"></div>
-          </div>
-          <div class="breath-sites" id="breath-sites-ui">
-            <div class="field">
-              <label>Commonly distracting — tap to add</label>
-              <div class="pills" id="breath-suggest-pills"></div>
-            </div>
-            <form class="field-row inline" id="breath-form">
-              <input type="text" id="breath-input" placeholder="another place, e.g. news.com" />
-              <button type="submit" class="cta narrow">Add a breath.</button>
-            </form>
-            <ul class="site-list" id="breath-list"></ul>
-          </div>
-        </div>
+        <p class="sub">The shape of every pause, and gentle returns while you work.</p>
 
         <div class="card">
           <div>
@@ -184,11 +158,18 @@
           </div>
         </div>
 
+      </section>
+
+      <!-- Night -->
+      <section class="section" id="sec-night">
+        <h2 class="heading">Night</h2>
+        <p class="sub">The browser rests when you should.</p>
+
         <div class="card">
           <div class="toggle-row">
             <div>
               <div class="toggle-title">Night mode</div>
-              <div class="toggle-desc">During these hours, sites meet a quiet pause.</div>
+              <div class="toggle-desc">During these hours, sites meet a quiet pause. Your allowed exceptions stay reachable.</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="night-enabled" />

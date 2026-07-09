@@ -2,14 +2,17 @@
 // Settings live in chrome.storage.sync; ephemeral session state in .local.
 
 const DEFAULTS = {
-  navBreathEnabled: true,            // navigation breath before chosen domains
-  breathMode: 'list',                // 'list' = only breathSites | 'all' = every new site (strict)
-  breathSites: [],                   // domains that meet a breath first (list mode)
+  // One list of places, each with a posture for how Miru meets you there:
+  //   'breathe' — a breath at the door, the site untouched inside
+  //   'calm'    — a breath at the door AND the feeds quieted inside (where a
+  //               calm pack exists — utils/calm.js; elsewhere it just breathes)
+  //   'block'   — the block page, with the rationed five-minute peek
+  // The whole array is a single sync item (~45 bytes per place against the
+  // 8 KB per-item quota) — no chunking needed.
+  places: [],                        // [{ domain: 'youtube.com', posture: 'calm' }]
+  blockDuringSessionsOnly: false,    // false = places set to block are always blocked
   periodicBreathEnabled: true,
   periodicBreathInterval: 15,        // minutes
-  blockedSites: [],                  // array of domain strings
-  blockDuringSessionsOnly: false,    // false = always block
-  focusSessions: [],                 // array of {id, name, duration, days, startTime, enabled}
   breathDuration: 10,                // seconds (rounded to whole breath cycles)
   breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
   timeMirrorEnabled: true,           // gentle notice after a long unbroken stay
@@ -18,8 +21,7 @@ const DEFAULTS = {
   nightModeEnabled: false,
   nightModeStart: '22:00',
   nightModeEnd: '07:00',
-  nightModeOverrides: [],            // domains allowed during night
-  customExcludedDomains: [],
+  customExcludedDomains: [],         // carve-outs under blocked/breathing domains
   theme: 'dark'                      // 'dark' | 'light' | 'auto' — dark by default
 };
 
