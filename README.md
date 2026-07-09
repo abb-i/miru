@@ -14,11 +14,15 @@ notice where you're going before you arrive.
   untouched. (A strict mode that breathes before every new site is available
   for those who want it.)
 - **Gentle site blocking** — block the places that pull at you, always or only
-  during focus sessions. A calm page, not a scolding one.
+  during focus sessions. A calm page, not a scolding one — and not a dead end:
+  up to three times a day you can choose to stay five minutes, then the block
+  returns.
 - **Tab limit** — a quiet question when tabs multiply: go deep, not wide.
 - **Focus sessions** — scheduled or on demand, with your blocked list enforced.
 - **Periodic breath & time mirror** — a soft reminder to surface after a while,
-  and a gentle notice when you've been in one place a long time.
+  and a gentle notice when you've been in one place a long time. Breaths appear
+  as a calm overlay on the page you're already on, at a natural pause (a tab
+  switch, a finished navigation) — not as another window cutting in.
 - **Night mode** — the browser rests when you should.
 - **First light** — the first breath of the day asks for one word to carry.
 - **One daily break** — 30 minutes where everything opens again. Honest, not
@@ -34,6 +38,9 @@ This repository is public so you don't have to take our word for it:
   `chrome.storage.local` on your device and are deleted after 14 days.
 - The only network behaviour is Chrome's own `declarativeNetRequest` engine
   redirecting *your* navigations to the extension's *own* local pages.
+- The breathing overlay is drawn by the extension's own bundled script
+  (`utils/overlay.js`); it reads nothing from the page it appears on and
+  removes itself when the breath ends.
 
 Full details: [Privacy policy](PRIVACY.md) · [Impressum / Legal notice](IMPRESSUM.md)
 

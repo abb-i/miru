@@ -17,8 +17,16 @@ user's settings. No request data is read or modified beyond these redirects.
 
 **host_permissions (`<all_urls>`)** — Users may block or add a breathing pause
 to any site they choose (plus an optional strict mode that breathes before
-every new domain); the redirect rules therefore need to be able to match any
-host. No page content is read or altered.
+every new domain); the redirect rules therefore need to match any host, and
+the breathing overlay (see `scripting`) must be able to appear on whatever
+page the user is viewing. No page content is read.
+
+**scripting** — Renders the extension's own breathing exercise as a temporary
+overlay on the user's current tab (instead of opening a separate window) for
+the manual breath, the optional periodic reminder, session/break endings, and
+the time mirror. Only bundled extension files are injected
+(`utils/words.js`, `utils/overlay.js`); no page content is read, evaluated,
+or transmitted, and nothing persists after the overlay dismisses itself.
 
 **tabs** — Used to (1) count open tabs for the user's tab limit, (2) know which
 site is active so the popup can show today's per-site time, (3) redirect a tab
@@ -26,11 +34,12 @@ to the block page when the user blocks a site that is already open, and (4)
 exempt already-open sites from the breathing pause.
 
 **storage** — Saves the user's settings (sync) and local state (today's usage
-totals, the running focus session or break). Nothing is transmitted.
+totals, the running focus session or break, the daily counter for brief
+"stay five minutes" unblocks). Nothing is transmitted.
 
 **alarms** — Ends focus sessions and breaks on time, starts scheduled sessions,
-runs the optional periodic breathing reminder, and re-evaluates the night-mode
-window once per minute.
+runs the optional periodic breathing reminder, ends the five-minute unblock of
+a blocked site, and re-evaluates the night-mode window once per minute.
 
 **idle** — Suppresses breathing reminders while the user is away from the
 computer, so prompts don't pile up.
@@ -65,9 +74,14 @@ blocking, tab limits, focus sessions, quiet nights.
 
 The extension uses declarativeNetRequest redirect rules to show its own
 breathing/block pages before user-chosen sites. It makes no external network
-requests, injects no content scripts, and collects no data. The `<all_urls>`
-host permission exists solely so users can apply the pause/block to any site
-they pick.
+requests and collects no data. The only script injection (scripting
+permission, no manifest content scripts) is the extension's own bundled
+overlay, executed on demand to draw its breathing exercise over the active
+tab; it reads nothing from the page. The `<all_urls>` host permission exists
+solely so users can apply the pause/block — and see the breathing overlay —
+on any site they pick. The block page offers a rationed escape hatch ("stay
+five minutes", at most three per day) implemented as a temporary session DNR
+allow rule scoped to that tab and domain.
 
 ## Assets still needed (cannot be generated from code)
 

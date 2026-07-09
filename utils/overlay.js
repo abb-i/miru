@@ -114,10 +114,28 @@
   animation:miru-rise .9s ease both;}
 .miru-block .miru-spiral-lg{opacity:.9;}
 .miru-not{font-family:'Cormorant Garamond',serif;font-weight:300;font-size:38px;color:var(--text);}
+.miru-peek{font-size:12px;color:var(--muted);background:none;border:none;cursor:pointer;
+  letter-spacing:.02em;opacity:.65;transition:opacity .2s ease,color .2s ease;padding:4px 8px;margin-top:-.6rem;}
+.miru-peek:hover{opacity:1;color:var(--text);}
+.miru-peek-note{font-size:11px;color:var(--muted);opacity:.5;letter-spacing:.02em;margin-top:-1rem;}
 @keyframes miru-rise{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 `;
 
   function ensureStyle(root) {
+    // Prefer a constructable stylesheet: it applies even under a strict page CSP
+    // (where an injected <style> can be dropped) when the breath rides on top of
+    // an arbitrary site. Fall back to a <style> element where it isn't supported.
+    const doc = root.ownerDocument || document;
+    try {
+      if (doc.adoptedStyleSheets && 'replaceSync' in CSSStyleSheet.prototype) {
+        if (doc.__miruSheet) return;
+        const sheet = new CSSStyleSheet();
+        sheet.replaceSync(CSS);
+        doc.adoptedStyleSheets = [...doc.adoptedStyleSheets, sheet];
+        doc.__miruSheet = true;
+        return;
+      }
+    } catch (e) { /* fall through to a plain <style> */ }
     if (root.querySelector('style[data-miru]')) return;
     const s = document.createElement('style');
     s.setAttribute('data-miru', '1');
@@ -302,6 +320,8 @@
         <div class="miru-not"></div>
         ${domain ? `<div class="miru-pill" style="position:static;transform:none;">${domain}</div>` : ''}
         <button class="miru-ghost miru-back">go back</button>
+        ${opts.onPeek ? `<button class="miru-peek">stay five minutes</button>` : ''}
+        ${opts.onPeek && opts.peekNote ? `<div class="miru-peek-note">${opts.peekNote}</div>` : ''}
       </div>`;
     root.appendChild(o);
     o.querySelector('.miru-not').textContent = word(opts.night ? 'night' : 'blocker') || 'Not today.';
@@ -317,6 +337,8 @@
 
     function leave() { dismiss(opts.onBack); }
     o.querySelector('.miru-back').addEventListener('click', leave);
+    const peekBtn = o.querySelector('.miru-peek');
+    if (peekBtn && typeof opts.onPeek === 'function') peekBtn.addEventListener('click', () => dismiss(opts.onPeek));
     function onKey(e) { if (e.key === 'Escape') leave(); }
     document.addEventListener('keydown', onKey, true);
 
