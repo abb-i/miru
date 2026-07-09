@@ -1,5 +1,6 @@
 // Miru — Popup
-// Three things: begin a 1-minute breath, open settings, see today's time.
+// Four things: begin a 1-minute breath, begin or end a focus session,
+// open settings, see today's time.
 
 const SESSION_SECONDS = 60;
 
@@ -10,8 +11,48 @@ function init() {
   document.getElementById('open-options').addEventListener('click', openOptions);
   document.getElementById('open-options-2').addEventListener('click', openOptions);
   document.getElementById('begin-breath').addEventListener('click', beginBreath);
+  bindFocus();
   renderIntention();
+  renderFocus();
   renderUsage();
+}
+
+// --- Focus session: begin on demand, watch it count down, end early ---------
+let focusTimer = null;
+
+function bindFocus() {
+  document.querySelectorAll('#focus-pills .focus-pill').forEach((p) =>
+    p.addEventListener('click', async () => {
+      await chrome.runtime.sendMessage({ type: 'MIRU_START_SESSION', duration: Number(p.dataset.min) })
+        .catch(() => {});
+      renderFocus(); // seeing the countdown appear is the confirmation
+    }));
+  document.getElementById('focus-end').addEventListener('click', async () => {
+    // Not silent: the session closes with its focusEnd breath, as it should.
+    await chrome.runtime.sendMessage({ type: 'MIRU_END_SESSION' }).catch(() => {});
+    renderFocus();
+    window.close(); // make room for the closing breath
+  });
+}
+
+async function renderFocus() {
+  clearInterval(focusTimer);
+  const res = await chrome.runtime.sendMessage({ type: 'MIRU_GET_STATE' }).catch(() => null);
+  const session = res && res.session;
+  const active = session && session.endTime > Date.now();
+  document.getElementById('focus-idle').hidden = !!active;
+  document.getElementById('focus-active').hidden = !active;
+  if (!active) return;
+  const left = document.getElementById('focus-left');
+  const tick = () => {
+    const ms = session.endTime - Date.now();
+    if (ms <= 0) { renderFocus(); return; }
+    const m = Math.floor(ms / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    left.textContent = `${m}:${String(s).padStart(2, '0')}`;
+  };
+  tick();
+  focusTimer = setInterval(tick, 1000);
 }
 
 // The word set at first light, carried quietly through the day.
