@@ -33,8 +33,9 @@ Endgerät statt.
 Zur Bereitstellung ihrer Funktionen speichert die Erweiterung folgende Daten im
 Speicher Ihres Browsers (`chrome.storage`):
 
-**a) Einstellungen** — Ihre Konfiguration (z. B. blockierte Websites,
-Tab-Limit, Atemmuster, Nachtmodus-Zeiten, Design).
+**a) Einstellungen** — Ihre Konfiguration (z. B. Ihre gewählten Orte und
+deren Haltung — Atmen, Beruhigen oder Blockieren —, Atemmuster,
+Nachtmodus-Zeiten, Design).
 Speicherort: `chrome.storage.sync` (siehe Ziffer 4).
 Speicherdauer: bis zur Änderung oder Löschung durch Sie bzw. bis zur
 Deinstallation.
@@ -44,12 +45,12 @@ damit das Popup Ihnen Ihren Tag anzeigen kann.
 Speicherort: `chrome.storage.local` (nur dieses Gerät).
 Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
-**c) Sitzungsdaten** — eine laufende Fokus-Sitzung, eine laufende Pause
-(„Break"), das Tageswort, eine noch ausstehende Atem-Erinnerung sowie ein
-Tageszähler für kurzzeitige Freigaben blockierter Seiten („fünf Minuten
-bleiben").
+**c) Sitzungsdaten** — eine laufende Fokus-Sitzung, das Tageswort, eine noch
+ausstehende Atem-Erinnerung, ein Tageszähler für kurzzeitige Freigaben
+blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk,
+falls das Beruhigen einer Website nicht mehr greift (nur der Domainname).
 Speicherort: `chrome.storage.local`.
-Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende.
+Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.
 
 Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO
 vorliegt, ist Rechtsgrundlage Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der
@@ -107,14 +108,17 @@ Funktionserbringung an:
   gemäß Ihren Einstellungen. Seiteninhalte werden dabei nicht gelesen.
 - **scripting**: Einblenden der erweiterungseigenen Atem-Übung als
   vorübergehende Überlagerung direkt auf der gerade geöffneten Seite (statt in
-  einem eigenen Fenster). Es wird ausschließlich mitgelieferter Code der
-  Erweiterung ausgeführt; Seiteninhalte werden weder gelesen noch ausgewertet
-  noch übermittelt.
-- **tabs**: Zählen offener Tabs (Tab-Limit), Erkennen der aktiven Website
-  (Zeitanzeige), Umleiten bereits geöffneter blockierter Seiten.
+  einem eigenen Fenster) sowie Ausblenden ablenkender Feed-Elemente
+  (Empfehlungen, Shorts, Reels, Explore) durch mitgelieferte Stylesheets auf
+  den Websites, die Sie auf „Beruhigen" gestellt haben (derzeit YouTube und
+  Instagram). Es wird ausschließlich mitgelieferter Code der Erweiterung
+  ausgeführt; Seiteninhalte werden weder gelesen noch ausgewertet noch
+  übermittelt.
+- **tabs**: Erkennen der aktiven Website (Zeitanzeige), Umleiten bereits
+  geöffneter blockierter Seiten.
 - **storage**: lokale Speicherung gemäß Ziffer 3.
-- **alarms**: zeitgesteuerte Funktionen (Sitzungs-/Pausenende, geplante
-  Sitzungen, Nachtmodus, Atem-Erinnerungen, Ende einer kurzzeitigen Freigabe).
+- **alarms**: zeitgesteuerte Funktionen (Sitzungsende, Nachtmodus,
+  Atem-Erinnerungen, Ende einer kurzzeitigen Freigabe).
 - **idle**: Unterdrückung von Erinnerungen, während Sie abwesend sind.
 
 ## 9. Ihre Rechte
@@ -179,16 +183,18 @@ described below happens exclusively on your device.
 To provide its features, the extension keeps the following in your browser's
 storage (`chrome.storage`):
 
-- **Settings** — your configuration (blocked sites, tab limit, breathing
-  pattern, night hours, theme). Stored in `chrome.storage.sync` (see section
-  4) until you change or delete them, or uninstall.
+- **Settings** — your configuration (your chosen places and their posture —
+  breathe, calm, or block — breathing pattern, night hours, theme). Stored in
+  `chrome.storage.sync` (see section 4) until you change or delete them, or
+  uninstall.
 - **Usage times** — time spent per site (domain and seconds) so the popup can
   show you your day. Stored in `chrome.storage.local` (this device only) for a
   maximum of 14 days, then deleted automatically.
-- **Session state** — a running focus session, a running break, the daily
-  intention word, a pending breath reminder, and a daily counter for brief
-  unblocks of blocked sites ("stay five minutes"). Stored locally until it
-  expires.
+- **Session state** — a running focus session, the daily intention word, a
+  pending breath reminder, a daily counter for brief unblocks of blocked
+  sites ("stay five minutes"), and a technical note (domain name only) if
+  calming a site no longer takes effect. Stored locally until it expires or
+  is resolved.
 
 Where this constitutes processing of personal data under the GDPR, the legal
 basis is Art. 6(1)(b) GDPR (providing the features you requested).
@@ -237,11 +243,13 @@ Miru requests browser permissions solely to work locally:
 its own breath/block/night pages per your settings; page content is never
 read), **scripting** (drawing the extension's own breathing exercise as a
 temporary overlay on the page you're viewing instead of opening a separate
-window; only bundled extension code runs, and page content is never read,
-evaluated, or transmitted), **tabs** (tab count, active site for the time
-display, redirecting already-open blocked tabs), **storage** (section 3),
-**alarms** (timed features, including ending a brief unblock), **idle** (no
-reminders while you're away).
+window, and hiding distracting feed elements — recommendations, Shorts,
+Reels, Explore — with bundled stylesheets on the sites you set to "calm",
+currently YouTube and Instagram; only bundled extension code runs, and page
+content is never read, evaluated, or transmitted), **tabs** (active site for
+the time display, redirecting already-open blocked tabs), **storage**
+(section 3), **alarms** (timed features, including ending a brief unblock),
+**idle** (no reminders while you're away).
 
 ## 9. Your rights
 
