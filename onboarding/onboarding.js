@@ -6,8 +6,8 @@
 (() => {
   const state = {
     why: null,
-    placesAction: 'breathe', // what the chosen places meet: a breath, or a block
-    blocked: new Set(),
+    placesAction: 'breathe', // the posture the chosen places get: breathe | calm | block
+    chosen: new Set(),
     breath: 10,          // seconds → rounded to whole cycles by the overlay
     periodic: 15,        // minutes, 0 = off
     night: false,
@@ -89,8 +89,8 @@
   function bindPlacePill(pill) {
     pill.addEventListener('click', () => {
       const d = pill.dataset.domain;
-      if (state.blocked.has(d)) { state.blocked.delete(d); pill.classList.remove('selected'); }
-      else { state.blocked.add(d); pill.classList.add('selected'); }
+      if (state.chosen.has(d)) { state.chosen.delete(d); pill.classList.remove('selected'); }
+      else { state.chosen.add(d); pill.classList.add('selected'); }
     });
   }
   $$('#place-pills .pill').forEach(bindPlacePill);
@@ -102,7 +102,7 @@
   }));
 
   $('#no-places').addEventListener('click', () => {
-    state.blocked.clear();
+    state.chosen.clear();
     $$('#place-pills .pill').forEach((p) => p.classList.remove('selected'));
     goTo(3);
   });
@@ -113,8 +113,8 @@
     const v = (input.value || '').trim().toLowerCase()
       .replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].split('?')[0];
     if (!v || !v.includes('.')) return;
-    if (!state.blocked.has(v)) {
-      state.blocked.add(v);
+    if (!state.chosen.has(v)) {
+      state.chosen.add(v);
       const pill = document.createElement('button');
       pill.type = 'button';
       pill.className = 'pill selected';
@@ -189,12 +189,14 @@
       periodicBreathEnabled: state.periodic > 0
     };
     if (state.periodic > 0) payload.periodicBreathInterval = state.periodic;
-    // The chosen places land on the list the user picked: breath (gentle,
-    // default) or block (firm). breathMode stays 'list' — strict "every new
-    // site" is an explicit opt-in from settings.
-    if (state.blocked.size) {
-      if (state.placesAction === 'block') payload.blockedSites = [...state.blocked];
-      else payload.breathSites = [...state.blocked];
+    // The chosen places all get the posture the user picked, merged into any
+    // places that already exist (a welcome revisit must not wipe the list).
+    if (state.chosen.size) {
+      let existing = [];
+      try { ({ places: existing = [] } = await chrome.storage.sync.get({ places: [] })); } catch (e) {}
+      const merged = new Map(existing.map((p) => [p.domain, p]));
+      for (const domain of state.chosen) merged.set(domain, { domain, posture: state.placesAction });
+      payload.places = [...merged.values()];
     }
     try { await chrome.storage.sync.set(payload); } catch (e) {}
   }

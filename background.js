@@ -5,11 +5,12 @@
 // worker is asleep — the reliability ceiling of webNavigation+tabs.update is gone.
 //
 // Rules (priority high→low):
-//   block (10)    redirect blocked domains → block.html
+//   block (10)    redirect places with posture 'block' → block.html
 //   night (8)     during night hours, redirect all → block.html?night=1
 //   allow-once    (session, 100) per-tab pass-through right after "continue"
+//   peek (60)     (session) five-minute pass into a blocked domain, per tab
 //   allow (5)     domains currently open in some tab → no breath (internal nav)
-//   breath (1)    redirect every other new http(s) main_frame → breath.html?target=…
+//   breath (1)    redirect places with posture 'breathe'/'calm' → breath.html?target=…
 
 importScripts('utils/domains.js', 'utils/storage.js', 'utils/words.js');
 
@@ -29,6 +30,16 @@ function cleanDomain(d) {
   return (d || '').replace(/^www\./, '').trim().toLowerCase();
 }
 
+// The domains whose place has one of the given postures, cleaned and deduped.
+// IPs/IPv6 are dropped — they aren't valid DNR requestDomains and one would
+// reject the whole rule.
+function placeDomains(...postures) {
+  return [...new Set((settings.places || [])
+    .filter((p) => p && postures.includes(p.posture))
+    .map((p) => cleanDomain(p.domain))
+    .filter((d) => d && !/^[\d.]+$/.test(d) && !d.includes(':')))];
+}
+
 // User-defined exceptions only (no built-in ALWAYS_EXCLUDED). Used as carve-outs
 // for the block rule so a subdomain like studio.youtube.com can stay reachable
 // while youtube.com is blocked — without ALWAYS_EXCLUDED self-excluding a block.
@@ -36,55 +47,38 @@ function customExceptionsDNR() {
   return [...new Set((settings.customExcludedDomains || []).map(cleanDomain).filter(Boolean))];
 }
 
-function excludedDNR() {
-  // DNR matches a domain and its subdomains automatically. Drop IPs/localhost
-  // (not valid DNR domains) to avoid rejecting the whole rule.
-  const base = ALWAYS_EXCLUDED.filter((d) => d && d !== '127.0.0.1' && d !== 'localhost');
-  const custom = (settings.customExcludedDomains || []).map(cleanDomain);
-  return [...new Set([...base, ...custom])].filter(Boolean);
-}
-
 async function rebuildRules() {
   const breathUrl = chrome.runtime.getURL('screens/breath.html');
   const blockUrl = chrome.runtime.getURL('screens/block.html');
   const add = [];
 
-  if (settings.navBreathEnabled) {
+  // Breath at the door for places with posture 'breathe' or 'calm' — calm is
+  // a breath plus a quieted room inside; the door is the same. ALWAYS_EXCLUDED
+  // deliberately does not apply — a chosen site (e.g. youtube.com) must win.
+  const breathSites = placeDomains('breathe', 'calm');
+  if (breathSites.length) {
     // GET only: a cross-site POST (bank 3-D Secure, SSO form_post) carries a
     // body that a redirect-then-continue would silently drop.
-    const base = { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], requestMethods: ['get'] };
-    let condition = null;
-    if (settings.breathMode === 'all') {
-      // Strict mode: every new http(s) place except the exclusions.
-      condition = { ...base, excludedRequestDomains: excludedDNR() };
-    } else {
-      // Default: only the places the user chose. ALWAYS_EXCLUDED deliberately
-      // does not apply — a chosen site (e.g. youtube.com) must win over it.
-      const sites = [...new Set((settings.breathSites || []).map(cleanDomain))]
-        .filter((d) => d && !/^[\d.]+$/.test(d) && !d.includes(':'));
-      if (sites.length) {
-        condition = { ...base, requestDomains: sites };
-        // Same carve-out logic as blocking: keep studio.youtube.com breath-free
-        // while youtube.com breathes, when the user kept it as an exception.
-        const carve = customExceptionsDNR().filter((e) => sites.some((s) => e === s || e.endsWith('.' + s)));
-        if (carve.length) condition.excludedRequestDomains = carve;
-      }
-    }
-    if (condition) {
-      add.push({
-        id: RID_BREATH, priority: 1,
-        action: { type: 'redirect', redirect: { regexSubstitution: breathUrl + '?target=\\0' } },
-        condition
-      });
-    }
+    const condition = {
+      regexFilter: '^https?://.*', resourceTypes: ['main_frame'],
+      requestMethods: ['get'], requestDomains: breathSites
+    };
+    // Same carve-out logic as blocking: keep studio.youtube.com breath-free
+    // while youtube.com breathes, when the user kept it as an exception.
+    const carve = customExceptionsDNR().filter((e) => breathSites.some((s) => e === s || e.endsWith('.' + s)));
+    if (carve.length) condition.excludedRequestDomains = carve;
+    add.push({
+      id: RID_BREATH, priority: 1,
+      action: { type: 'redirect', redirect: { regexSubstitution: breathUrl + '?target=\\0' } },
+      condition
+    });
   }
 
   if (settings.nightModeEnabled && isNightTime(settings)) {
-    const overrides = (settings.nightModeOverrides || []).map((d) => (d || '').replace(/^www\./, '').trim().toLowerCase()).filter(Boolean);
-    // Night means night: only the user's own exceptions and night overrides stay
-    // reachable. ALWAYS_EXCLUDED (Google/YouTube) is deliberately NOT carved out
-    // here — it exempts sites from the breath, not from the night pause.
-    const nightExcluded = [...new Set([...customExceptionsDNR(), ...overrides])];
+    // Night means night: only the user's own exceptions stay reachable.
+    // ALWAYS_EXCLUDED (Google) is deliberately NOT carved out here — it exempts
+    // sites from tracking, not from the night pause.
+    const nightExcluded = customExceptionsDNR();
     const condition = { regexFilter: '^https?://.*', resourceTypes: ['main_frame'] };
     if (nightExcluded.length) condition.excludedRequestDomains = nightExcluded;
     add.push({
@@ -94,13 +88,12 @@ async function rebuildRules() {
     });
   }
 
-  const blockOn = settings.blockedSites && settings.blockedSites.length &&
+  const blockDomains = placeDomains('block');
+  const blockOn = blockDomains.length &&
     (!settings.blockDuringSessionsOnly || sessionActive);
   if (blockOn) {
     const exceptions = customExceptionsDNR();
-    settings.blockedSites.forEach((d, i) => {
-      const dom = cleanDomain(d);
-      if (!dom) return;
+    blockDomains.forEach((dom, i) => {
       // A blocked domain matches its subdomains too. Carve out any allowed
       // exception that sits under it (e.g. studio.youtube.com under youtube.com).
       const carveOut = exceptions.filter((e) => e === dom || e.endsWith('.' + dom));
@@ -130,7 +123,7 @@ async function sweepBlockedTabs(blockOn) {
   if (!blockOn) return;
   const blockUrl = chrome.runtime.getURL('screens/block.html');
   const exceptions = customExceptionsDNR();
-  const domains = settings.blockedSites.map(cleanDomain).filter(Boolean);
+  const domains = placeDomains('block');
   let tabs = [];
   try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
   // Tabs with a live peek are deliberately inside a blocked site for a few
@@ -152,7 +145,7 @@ async function sweepBlockedTabs(blockOn) {
 // Domains currently open anywhere → allowed (so internal navigation / reloads /
 // already-open sites don't trigger the breath).
 async function applyAllowRule() {
-  if (!settings.navBreathEnabled) { await DNR.updateDynamicRules({ removeRuleIds: [RID_ALLOW] }).catch(() => {}); return; }
+  if (!placeDomains('breathe', 'calm').length) { await DNR.updateDynamicRules({ removeRuleIds: [RID_ALLOW] }).catch(() => {}); return; }
   let domains = [];
   try {
     const tabs = await chrome.tabs.query({});
@@ -224,7 +217,31 @@ function applyPeriodicBreath() {
   }
 }
 
+// v1 → v2: the separate breath/block lists become one list of places with a
+// posture. Idempotent (guarded on `places` existing), so it's safe on install,
+// update, and dev reloads alike. Block wins when a domain sat on both lists.
+async function migrateToPlaces() {
+  const cur = await chrome.storage.sync.get(null);
+  if (Array.isArray(cur.places)) return;
+  const places = [];
+  const seen = new Set();
+  const add = (d, posture) => {
+    const dom = cleanDomain(d);
+    if (dom && !seen.has(dom)) { seen.add(dom); places.push({ domain: dom, posture }); }
+  };
+  (cur.blockedSites || []).forEach((d) => add(d, 'block'));
+  (cur.breathSites || []).forEach((d) => add(d, 'breathe'));
+  await chrome.storage.sync.set({ places });
+  await chrome.storage.sync.remove([
+    'navBreathEnabled', 'breathMode', 'breathSites',
+    'tabLimit', 'tabLimitEnabled', 'blockedSites',
+    'focusSessions', 'nightModeOverrides'
+  ]).catch(() => {});
+  await chrome.storage.local.remove(['breakState']).catch(() => {});
+}
+
 chrome.runtime.onInstalled.addListener(async (details) => {
+  await migrateToPlaces();
   const cur = await chrome.storage.sync.get(null);
   const seed = {};
   for (const [k, v] of Object.entries(DEFAULTS)) if (!(k in cur)) seed[k] = v;
@@ -323,12 +340,13 @@ async function endPeek(tabId) {
   let tab;
   try { tab = await chrome.tabs.get(tabId); } catch (e) { return; } // tab gone
   if (!tab || !/^https?:\/\//i.test(tab.url || '')) return;
-  const blockOn = settings.blockedSites && settings.blockedSites.length &&
+  const blockDomains = placeDomains('block');
+  const blockOn = blockDomains.length &&
     (!settings.blockDuringSessionsOnly || sessionActive);
   if (!blockOn) return;
   let host = '';
   try { host = new URL(tab.url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return; }
-  const hit = settings.blockedSites.map(cleanDomain).filter(Boolean).find((d) => host === d || host.endsWith('.' + d));
+  const hit = blockDomains.find((d) => host === d || host.endsWith('.' + d));
   if (!hit) return;
   if (customExceptionsDNR().some((e) => host === e || host.endsWith('.' + e))) return;
   const blockUrl = chrome.runtime.getURL('screens/block.html');
