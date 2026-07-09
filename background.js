@@ -17,7 +17,10 @@ const DNR = chrome.declarativeNetRequest;
 const SELF = chrome.runtime.getURL('');
 console.log('[Miru] background loaded');
 
-const RID_BREATH = 1, RID_ALLOW = 2, RID_NIGHT = 3, RID_BLOCK_BASE = 100, RID_ALLOWONCE_BASE = 5000;
+const RID_BREATH = 1, RID_ALLOW = 2, RID_NIGHT = 3, RID_BLOCK_BASE = 100, RID_ALLOWONCE_BASE = 5000, RID_PEEK_BASE = 1000000;
+
+const PEEK_MINUTES = 5;
+const PEEK_DAILY_LIMIT = 3;   // at most three five-minute peeks a day
 
 let settings = { ...DEFAULTS };
 let sessionActive = false;
@@ -105,11 +108,14 @@ async function rebuildRules() {
       // A blocked domain matches its subdomains too. Carve out any allowed
       // exception that sits under it (e.g. studio.youtube.com under youtube.com).
       const carveOut = exceptions.filter((e) => e === dom || e.endsWith('.' + dom));
-      const condition = { requestDomains: [dom], resourceTypes: ['main_frame'] };
+      // regexFilter (with requestDomains still scoping the domain) lets the
+      // substitution keep the full blocked URL as &target — so a peek returns
+      // to the exact page instead of the bare site root.
+      const condition = { requestDomains: [dom], regexFilter: '^https?://.*', resourceTypes: ['main_frame'] };
       if (carveOut.length) condition.excludedRequestDomains = carveOut;
       add.push({
         id: RID_BLOCK_BASE + i, priority: 10,
-        action: { type: 'redirect', redirect: { url: blockUrl + '?site=' + encodeURIComponent(dom) } },
+        action: { type: 'redirect', redirect: { regexSubstitution: blockUrl + '?site=' + encodeURIComponent(dom) + '&target=\\0' } },
         condition
       });
     });
@@ -131,13 +137,19 @@ async function sweepBlockedTabs(blockOn) {
   const domains = settings.blockedSites.map(cleanDomain).filter(Boolean);
   let tabs = [];
   try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
+  // Tabs with a live peek are deliberately inside a blocked site for a few
+  // minutes — the sweep must leave them be, or it would drag them back to the
+  // block (a peek → block → peek loop). endPeek re-blocks them when time's up.
+  let peekIds = new Set();
+  try { for (const r of await DNR.getSessionRules()) peekIds.add(r.id); } catch (e) {}
   for (const t of tabs) {
+    if (peekIds.has(RID_PEEK_BASE + t.id)) continue;
     let host = '';
     try { host = new URL(t.url).hostname.replace(/^www\./, '').toLowerCase(); } catch { continue; }
     const hit = domains.find((d) => host === d || host.endsWith('.' + d));
     if (!hit) continue;
     if (exceptions.some((e) => host === e || host.endsWith('.' + e))) continue;
-    chrome.tabs.update(t.id, { url: blockUrl + '?site=' + encodeURIComponent(hit) }).catch(() => {});
+    chrome.tabs.update(t.id, { url: blockUrl + '?site=' + encodeURIComponent(hit) + '&target=' + encodeURIComponent(t.url) }).catch(() => {});
   }
 }
 
@@ -187,6 +199,10 @@ async function init() {
   const brk = await getBreakState();
   breakActive = !!(brk && brk.until > Date.now());
   if (breakActive) chrome.alarms.create('miru-break-end', { when: brk.until });
+  // Restore a periodic breath that was armed but not yet delivered before the
+  // worker slept, so its rhythm survives the restart.
+  const { breathDue: bd } = await chrome.storage.local.get('breathDue');
+  breathDue = bd || null;
   // Clear any stale dynamic rules from a previous version before rebuilding.
   try {
     const existing = await DNR.getDynamicRules();
@@ -210,6 +226,10 @@ function applyPeriodicBreath() {
   if (settings.periodicBreathEnabled) {
     const m = settings.periodicBreathInterval || 15;
     chrome.alarms.create('miru-periodic', { periodInMinutes: m, delayInMinutes: m });
+  } else {
+    // Turned off: drop any breath that was armed but not yet delivered.
+    breathDue = null;
+    chrome.storage.local.remove('breathDue').catch(() => {});
   }
 }
 
@@ -264,12 +284,84 @@ async function allowOnce(tabId, targetUrl) {
   setTimeout(() => DNR.updateSessionRules({ removeRuleIds: [id] }).catch(() => {}), 15000);
 }
 
+// --- Peek (a time-boxed way past the block) ---------------------------------
+// From the block screen the user can choose to step into a blocked site for a
+// few minutes. Scoped to that domain in that tab: internal navigation flows (a
+// channel to a video) but other blocked sites stay shut. Priority sits above
+// the block (10) and night (8), below the post-breath pass (100). An alarm ends
+// it — a service-worker setTimeout wouldn't survive the worker sleeping.
+//
+// Peeks are rationed: PEEK_DAILY_LIMIT a day, counted in storage.local as
+// { day: 'YYYY-MM-DD', count }. Once the day is spent the block holds firm, so
+// the site can't be browsed five minutes at a time.
+async function peekRemaining() {
+  const { peekUse } = await chrome.storage.local.get('peekUse');
+  const used = (peekUse && peekUse.day === todayKey()) ? (peekUse.count || 0) : 0;
+  return Math.max(0, PEEK_DAILY_LIMIT - used);
+}
+
+// Count one peek against today's allowance; false if the day is already spent.
+async function consumePeek() {
+  const { peekUse } = await chrome.storage.local.get('peekUse');
+  const today = todayKey();
+  const used = (peekUse && peekUse.day === today) ? (peekUse.count || 0) : 0;
+  if (used >= PEEK_DAILY_LIMIT) return false;
+  await chrome.storage.local.set({ peekUse: { day: today, count: used + 1 } });
+  return true;
+}
+
+async function grantPeek(tabId, site) {
+  const dom = cleanDomain(site);
+  // An IP/host we can't put in requestDomains can't be blocked by one either,
+  // so there's nothing to peek past — bail rather than build an invalid rule.
+  if (!dom || /^[\d.]+$/.test(dom) || dom.includes(':')) return;
+  // Prefer scoping to this tab; if the tab id is missing, fall back to a
+  // domain-only pass (a shared id) so the pass still exists and can't loop.
+  const hasTab = Number.isInteger(tabId);
+  const id = hasTab ? RID_PEEK_BASE + tabId : RID_PEEK_BASE;
+  const condition = { requestDomains: [dom], resourceTypes: ['main_frame'] };
+  if (hasTab) condition.tabIds = [tabId];
+  await DNR.updateSessionRules({
+    removeRuleIds: [id],
+    addRules: [{ id, priority: 60, action: { type: 'allow' }, condition }]
+  }).catch((e) => console.warn('[Miru] peek', e));
+  console.log('[Miru] peek granted', { tabId, dom, id });
+  chrome.alarms.create('miru-peek-' + (hasTab ? tabId : 'shared'), { when: Date.now() + PEEK_MINUTES * 60 * 1000 });
+}
+
+async function endPeek(tabId) {
+  await DNR.updateSessionRules({ removeRuleIds: [RID_PEEK_BASE + tabId] }).catch(() => {});
+  chrome.alarms.clear('miru-peek-' + tabId);
+  // If the tab is still on the peeked (blocked) domain when the window closes,
+  // bring it back to the block — the peek was time-boxed, not a pass. DNR only
+  // catches *new* requests, so a still-loaded page wouldn't stop on its own.
+  let tab;
+  try { tab = await chrome.tabs.get(tabId); } catch (e) { return; } // tab gone
+  if (!tab || !/^https?:\/\//i.test(tab.url || '')) return;
+  const blockOn = !breakActive && settings.blockedSites && settings.blockedSites.length &&
+    (!settings.blockDuringSessionsOnly || sessionActive);
+  if (!blockOn) return;
+  let host = '';
+  try { host = new URL(tab.url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return; }
+  const hit = settings.blockedSites.map(cleanDomain).filter(Boolean).find((d) => host === d || host.endsWith('.' + d));
+  if (!hit) return;
+  if (customExceptionsDNR().some((e) => host === e || host.endsWith('.' + e))) return;
+  const blockUrl = chrome.runtime.getURL('screens/block.html');
+  chrome.tabs.update(tabId, { url: blockUrl + '?site=' + encodeURIComponent(hit) + '&target=' + encodeURIComponent(tab.url) }).catch(() => {});
+}
+
 // --- Tab tracking (keeps the allow-rule current) ----------------------------
-chrome.tabs.onUpdated.addListener((id, info) => {
+chrome.tabs.onUpdated.addListener((id, info, tab) => {
   if (info.status === 'complete') DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   if (info.url || info.status === 'complete') { scheduleAllow(); updateActive(); }
+  // A finished navigation on the active tab is a natural seam for an armed breath.
+  if (breathDue && info.status === 'complete' && tab && tab.active) maybeDeliverBreath();
 });
-chrome.tabs.onRemoved.addListener((id) => { DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {}); scheduleAllow(); });
+chrome.tabs.onRemoved.addListener((id) => {
+  DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
+  endPeek(id);
+  scheduleAllow();
+});
 // Resolve with a tab's destination URL once it commits, or null if it isn't a
 // real http(s) link. Tells a link's new tab (opened blank, navigated a beat
 // later) apart from a genuinely empty new tab. Resolves as soon as *any*
@@ -311,7 +403,7 @@ chrome.tabs.onCreated.addListener(async (tab) => {
     (target ? '&target=' + encodeURIComponent(target) : '');
   chrome.tabs.update(tab.id, { url }).catch(() => {});
 });
-chrome.tabs.onActivated.addListener(() => updateActive());
+chrome.tabs.onActivated.addListener(() => { updateActive(); if (breathDue) maybeDeliverBreath(); });
 
 // --- Breaks -------------------------------------------------------------------
 // One 30-minute break per day: blocked sites open again and the navigation
@@ -338,7 +430,7 @@ async function endBreak({ silent } = {}) {
   breakActive = false;
   chrome.alarms.clear('miru-break-end');
   await rebuildRules();
-  if (wasActive && !silent) openBreathTab('breakEnd', settings.breathDuration || 10);
+  if (wasActive && !silent) showBreath('breakEnd', settings.breathDuration || 10);
 }
 
 // --- Focus sessions ---------------------------------------------------------
@@ -357,7 +449,7 @@ async function endSession({ silent } = {}) {
   sessionActive = false;
   await rebuildRules();
   chrome.alarms.clear('miru-session-end');
-  if (!silent) openBreathTab('focusEnd', 8);
+  if (!silent) showBreath('focusEnd', 8);
 }
 
 chrome.alarms.onAlarm.addListener(async (a) => {
@@ -368,11 +460,14 @@ chrome.alarms.onAlarm.addListener(async (a) => {
   else if (a.name === 'miru-periodic') {
     if (!settings.periodicBreathEnabled) { chrome.alarms.clear('miru-periodic'); return; }
     if (breakActive) return; // the break is a rest from the rhythm too
-    // Don't pile up breath tabs while the user is away from the machine.
-    let state = 'active';
-    try { state = await chrome.idle.queryState(60); } catch (e) {}
-    if (state !== 'active') return;
-    openBreathTab('periodic', settings.breathDuration || 10);
+    // Arm, don't fire: the breath waits for the next natural seam (a tab switch
+    // or a finished navigation) so it rides a transition instead of cutting in.
+    // A single latched flag means being away just leaves it armed — no pile-up.
+    await armPeriodicBreath();
+  } else if (a.name.startsWith('miru-peek-')) {
+    const rest = a.name.slice('miru-peek-'.length);
+    if (rest === 'shared') await DNR.updateSessionRules({ removeRuleIds: [RID_PEEK_BASE] }).catch(() => {});
+    else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
     await checkScheduled();
     await checkTimeMirror();
@@ -397,7 +492,7 @@ async function checkTimeMirror() {
   if (state !== 'active') return;
   const minutes = Math.round((Date.now() - tracker.start) / 60000);
   await chrome.storage.local.set({ tracker: { ...tracker, mirrorAt: Date.now() } });
-  openBreathTab('timeMirror', settings.breathDuration || 10, {
+  showBreath('timeMirror', settings.breathDuration || 10, {
     mirror: tracker.domain, minutes: String(minutes)
   });
 }
@@ -416,15 +511,124 @@ async function checkScheduled() {
   }
 }
 
-// Standalone breath (manual / periodic / session end / mirror): a fullscreen
-// window that holds the whole screen for the moment, then closes itself —
-// not another tab left behind to hoard. Falls back to a tab if the window
-// can't be created (some platforms restrict fullscreen popups).
-function openBreathTab(pool, duration, extra = {}) {
-  const u = chrome.runtime.getURL('screens/breath.html') + '?' +
-    new URLSearchParams({ session: '1', pool, duration: String(duration), theme: settings.theme, ...extra }).toString();
+// --- Standalone breath (manual / session end / break end / mirror / periodic)
+// Prefer an in-page overlay painted onto the tab the user is already looking at
+// — no context switch, nothing new in the app switcher, and dismissing it never
+// closes their actual work. Fall back to a fullscreen window only where a page
+// can't host the overlay (chrome://, the Web Store, a blank tab, injection denied).
+
+let lastBreathAt = 0;
+
+const WEBSTORE_RE = /^https?:\/\/(chrome\.google\.com\/webstore|chromewebstore\.google\.com)/i;
+
+function resolveTheme() {
+  // The worker has no matchMedia; pass the raw preference and let the page
+  // resolve 'auto'. renderBreath only distinguishes 'light' from everything else.
+  return settings.theme || 'dark';
+}
+
+// The active tab of the focused normal window, if it can host an overlay.
+async function activeHostTab() {
+  try {
+    const win = await chrome.windows.getLastFocused();
+    if (!win || !win.focused || win.type !== 'normal') return null;
+    const [tab] = await chrome.tabs.query({ active: true, windowId: win.id });
+    if (!tab || tab.id == null) return null;
+    const u = tab.url || '';
+    if (!/^https?:\/\//i.test(u)) return null;  // chrome://, extension pages, blank
+    if (WEBSTORE_RE.test(u)) return null;       // the Web Store forbids injection
+    return tab;
+  } catch (e) { return null; }
+}
+
+// Runs *in the page* (serialized by scripting.executeScript). Must be
+// self-contained — no closure references.
+function injectBreath(opts) {
+  try {
+    if (!window.MiruOverlay || !document.body) return false;
+    if (document.querySelector('.miru-overlay')) return true; // already breathing
+    let theme = opts.theme;
+    if (theme === 'auto') {
+      theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    }
+    window.MiruOverlay.injectFonts();
+    window.MiruOverlay.renderBreath(document.body, {
+      theme, pool: opts.pool, duration: opts.duration, pattern: opts.pattern,
+      domain: opts.mirror || '',
+      subtitle: opts.minutes ? ('You’ve been here ' + opts.minutes + ' minutes.') : '',
+      askContinue: false,
+      onDone: function () {}
+    });
+    return true;
+  } catch (e) { return false; }
+}
+
+async function injectBreathInto(tabId, opts) {
+  try {
+    // words.js/overlay.js declare top-level consts, so re-running them in the
+    // same isolated world would throw "already declared". Only load them when
+    // this document hasn't been seeded yet (a fresh navigation clears them).
+    const [{ result: has }] = await chrome.scripting.executeScript({
+      target: { tabId }, func: () => !!window.MiruOverlay
+    });
+    if (!has) {
+      await chrome.scripting.executeScript({ target: { tabId }, files: ['utils/words.js', 'utils/overlay.js'] });
+    }
+    const [{ result: ok }] = await chrome.scripting.executeScript({
+      target: { tabId }, func: injectBreath, args: [opts]
+    });
+    return ok !== false;
+  } catch (e) { return false; }
+}
+
+function breathWindow(opts) {
+  const params = { session: '1', pool: opts.pool, duration: String(opts.duration), theme: opts.theme };
+  if (opts.mirror) params.mirror = opts.mirror;
+  if (opts.minutes) params.minutes = String(opts.minutes);
+  const u = chrome.runtime.getURL('screens/breath.html') + '?' + new URLSearchParams(params).toString();
   chrome.windows.create({ url: u, type: 'popup', state: 'fullscreen', focused: true })
     .catch(() => chrome.tabs.create({ url: u }).catch(() => {}));
+}
+
+async function showBreath(pool, duration, extra = {}) {
+  lastBreathAt = Date.now();
+  const opts = { theme: resolveTheme(), pool, duration, pattern: settings.breathPattern,
+    mirror: extra.mirror || '', minutes: extra.minutes || '' };
+  const tab = await activeHostTab();
+  if (tab && await injectBreathInto(tab.id, opts)) return;
+  breathWindow(opts);
+}
+
+// --- Periodic breath: armed by the interval, delivered at a natural seam ------
+// The rhythm shouldn't slice into focus. When the interval elapses we *arm* the
+// breath rather than fire it, then deliver at the next moment attention is
+// already moving — a tab switch or a completed navigation. In unbroken deep
+// flow (no seam) it simply waits; a breath is meant to catch a transition.
+let breathDue = null;   // { pool, duration } when armed, else null
+let delivering = false;
+
+async function armPeriodicBreath() {
+  breathDue = { pool: 'periodic', duration: settings.breathDuration || 10 };
+  await chrome.storage.local.set({ breathDue }).catch(() => {});
+}
+
+async function maybeDeliverBreath() {
+  if (!breathDue || delivering || breakActive) return;
+  if (Date.now() - lastBreathAt < 60000) return;   // just breathed — let it settle
+  let state = 'active';
+  try { state = await chrome.idle.queryState(60); } catch (e) {}
+  if (state !== 'active') return;                  // not here — keep waiting
+  const tab = await activeHostTab();
+  if (!tab) return;                                // wait for a seam we can host
+  delivering = true;
+  const due = breathDue;
+  breathDue = null;
+  await chrome.storage.local.remove('breathDue').catch(() => {});
+  lastBreathAt = Date.now();
+  const opts = { theme: resolveTheme(), pool: due.pool, duration: due.duration,
+    pattern: settings.breathPattern, mirror: '', minutes: '' };
+  if (!(await injectBreathInto(tab.id, opts))) breathWindow(opts);
+  delivering = false;
 }
 
 // --- Time tracking ----------------------------------------------------------
@@ -506,7 +710,22 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ today: usage[todayKey()] || {} });
         break;
       }
-      case 'MIRU_BEGIN_BREATH': openBreathTab('periodic', msg.duration || 60); sendResponse({ ok: true }); break;
+      case 'MIRU_BEGIN_BREATH': showBreath('periodic', msg.duration || 60); sendResponse({ ok: true }); break;
+      case 'MIRU_PEEK_LEFT': sendResponse({ remaining: await peekRemaining(), limit: PEEK_DAILY_LIMIT }); break;
+      case 'MIRU_PEEK': {
+        const id = msg.tabId != null ? msg.tabId : (sender.tab && sender.tab.id);
+        // Ration first: a spent day holds the block firm, no pass granted.
+        if (!(await consumePeek())) { sendResponse({ ok: false, reason: 'limit', remaining: 0 }); break; }
+        await grantPeek(id, msg.site);   // grantPeek tolerates a missing id
+        // Navigate here, strictly after the pass is committed, so the block
+        // can't re-catch the request in the gap before the rule goes live.
+        let navigated = false;
+        if (Number.isInteger(id) && msg.target) {
+          try { await chrome.tabs.update(id, { url: msg.target }); navigated = true; } catch (e) {}
+        }
+        sendResponse({ ok: true, navigated, remaining: await peekRemaining() });
+        break;
+      }
       case 'MIRU_START_BREAK': sendResponse(await startBreak()); break;
       case 'MIRU_END_BREAK': await endBreak({ silent: msg.silent }); sendResponse({ ok: true }); break;
       case 'MIRU_START_SESSION': sendResponse({ session: await startSession({ name: msg.name, duration: msg.duration }) }); break;

@@ -25,8 +25,9 @@ async function renderIntention() {
   document.getElementById('intention').hidden = false;
 }
 
-// Opens a guided breath in a fullscreen window of its own; it closes itself
-// when the breath completes.
+// Begins a guided breath as an overlay on the page you're viewing (a
+// fullscreen window of its own where the page can't host one); it removes
+// itself when the breath completes.
 async function beginBreath() {
   await chrome.runtime.sendMessage({ type: 'MIRU_BEGIN_BREATH', duration: SESSION_SECONDS })
     .catch(() => {});

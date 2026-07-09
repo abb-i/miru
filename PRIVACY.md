@@ -1,6 +1,6 @@
 # Datenschutzerklärung für die Browser-Erweiterung „Miru"
 
-_Stand: 7. Juli 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
+_Stand: 9. Juli 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
 
 ## 1. Verantwortlicher
 
@@ -45,7 +45,9 @@ Speicherort: `chrome.storage.local` (nur dieses Gerät).
 Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
 **c) Sitzungsdaten** — eine laufende Fokus-Sitzung, eine laufende Pause
-(„Break") und das Tageswort.
+(„Break"), das Tageswort, eine noch ausstehende Atem-Erinnerung sowie ein
+Tageszähler für kurzzeitige Freigaben blockierter Seiten („fünf Minuten
+bleiben").
 Speicherort: `chrome.storage.local`.
 Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende.
 
@@ -102,12 +104,17 @@ Funktionserbringung an:
 
 - **declarativeNetRequest** und Zugriff auf alle Websites: Umleitung von
   Navigationen auf die erweiterungseigene Atem-, Blockier- oder Nachtseite
-  gemäß Ihren Einstellungen. Seiteninhalte werden weder gelesen noch verändert.
+  gemäß Ihren Einstellungen. Seiteninhalte werden dabei nicht gelesen.
+- **scripting**: Einblenden der erweiterungseigenen Atem-Übung als
+  vorübergehende Überlagerung direkt auf der gerade geöffneten Seite (statt in
+  einem eigenen Fenster). Es wird ausschließlich mitgelieferter Code der
+  Erweiterung ausgeführt; Seiteninhalte werden weder gelesen noch ausgewertet
+  noch übermittelt.
 - **tabs**: Zählen offener Tabs (Tab-Limit), Erkennen der aktiven Website
   (Zeitanzeige), Umleiten bereits geöffneter blockierter Seiten.
 - **storage**: lokale Speicherung gemäß Ziffer 3.
 - **alarms**: zeitgesteuerte Funktionen (Sitzungs-/Pausenende, geplante
-  Sitzungen, Nachtmodus, Atem-Erinnerungen).
+  Sitzungen, Nachtmodus, Atem-Erinnerungen, Ende einer kurzzeitigen Freigabe).
 - **idle**: Unterdrückung von Erinnerungen, während Sie abwesend sind.
 
 ## 9. Ihre Rechte
@@ -145,7 +152,7 @@ Adresse abrufbar.
 
 # Privacy Policy for the "Miru" browser extension (English translation)
 
-_Last updated: July 7, 2026. The German version above is the legally
+_Last updated: July 9, 2026. The German version above is the legally
 authoritative one._
 
 ## 1. Controller
@@ -178,8 +185,10 @@ storage (`chrome.storage`):
 - **Usage times** — time spent per site (domain and seconds) so the popup can
   show you your day. Stored in `chrome.storage.local` (this device only) for a
   maximum of 14 days, then deleted automatically.
-- **Session state** — a running focus session, a running break, and the daily
-  intention word. Stored locally until it expires.
+- **Session state** — a running focus session, a running break, the daily
+  intention word, a pending breath reminder, and a daily counter for brief
+  unblocks of blocked sites ("stay five minutes"). Stored locally until it
+  expires.
 
 Where this constitutes processing of personal data under the GDPR, the legal
 basis is Art. 6(1)(b) GDPR (providing the features you requested).
@@ -225,10 +234,14 @@ purpose.
 
 Miru requests browser permissions solely to work locally:
 **declarativeNetRequest** + access to all sites (redirecting navigations to
-its own breath/block/night pages per your settings; page content is never read
-or modified), **tabs** (tab count, active site for the time display,
-redirecting already-open blocked tabs), **storage** (section 3), **alarms**
-(timed features), **idle** (no reminders while you're away).
+its own breath/block/night pages per your settings; page content is never
+read), **scripting** (drawing the extension's own breathing exercise as a
+temporary overlay on the page you're viewing instead of opening a separate
+window; only bundled extension code runs, and page content is never read,
+evaluated, or transmitted), **tabs** (tab count, active site for the time
+display, redirecting already-open blocked tabs), **storage** (section 3),
+**alarms** (timed features, including ending a brief unblock), **idle** (no
+reminders while you're away).
 
 ## 9. Your rights
 
