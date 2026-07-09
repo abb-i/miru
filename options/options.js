@@ -60,6 +60,25 @@ async function loadAll() {
 
   // Appearance
   selectPill('theme-pills', 'theme', s.theme);
+
+  // Calm health: surface selector breakage reported by utils/calm.js.
+  await renderCalmHealth();
+  chrome.storage.onChanged.addListener((c, area) => {
+    if (area === 'local' && c.calmHealth) renderCalmHealth();
+  });
+}
+
+// A calm pack whose critical selectors stopped matching means the site moved
+// under us — say so quietly instead of letting the feed return in silence.
+async function renderCalmHealth() {
+  const el = document.getElementById('calm-health');
+  const { calmHealth = {} } = await chrome.storage.local.get('calmHealth');
+  const domains = Object.keys(calmHealth);
+  el.hidden = !domains.length;
+  el.textContent = domains.length
+    ? 'Calm mode may be out of date on ' + domains.join(' and ') +
+      ' — the feed may show there until Miru updates.'
+    : '';
 }
 
 function selectPill(containerId, attr, value) {

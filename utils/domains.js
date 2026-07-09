@@ -2,9 +2,11 @@
 // Decides which URLs are exempt from any screen, what counts as a new domain,
 // and which domains are blocked.
 
-// Google ecosystem + common internals — never trigger any Miru screen.
+// Google workspace + common internals — exempt from time tracking (the only
+// remaining consumer of isExcluded). youtube.com is deliberately NOT here:
+// it's a flagship calm-mode site, and its time should count.
 const ALWAYS_EXCLUDED = [
-  'google.com', 'gmail.com', 'youtube.com',
+  'google.com', 'gmail.com',
   'docs.google.com', 'drive.google.com', 'sheets.google.com',
   'slides.google.com', 'calendar.google.com', 'maps.google.com',
   'photos.google.com', 'meet.google.com', 'chat.google.com',
@@ -98,25 +100,6 @@ function getRootDomain(url) {
   }
 }
 
-function isNewDomain(prevUrl, newUrl) {
-  const next = getRootDomain(newUrl);
-  if (!next) return false;
-  return getRootDomain(prevUrl) !== next;
-}
-
-function isBlocked(url, blockedList = []) {
-  try {
-    const hostname = _hostname(url);
-    return blockedList.some(d => {
-      const clean = (d || '').replace(/^www\./, '').trim().toLowerCase();
-      if (!clean) return false;
-      return hostname === clean || hostname.endsWith('.' + clean);
-    });
-  } catch {
-    return false;
-  }
-}
-
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ALWAYS_EXCLUDED, COMMONLY_DISTRACTING, isExcluded, getRootDomain, isNewDomain, isBlocked };
+  module.exports = { ALWAYS_EXCLUDED, COMMONLY_DISTRACTING, isExcluded, getRootDomain };
 }

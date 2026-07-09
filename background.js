@@ -12,7 +12,7 @@
 //   allow (5)     domains currently open in some tab → no breath (internal nav)
 //   breath (1)    redirect places with posture 'breathe'/'calm' → breath.html?target=…
 
-importScripts('utils/domains.js', 'utils/storage.js', 'utils/words.js');
+importScripts('utils/domains.js', 'utils/storage.js', 'utils/words.js', 'utils/calm.js');
 
 const DNR = chrome.declarativeNetRequest;
 console.log('[Miru] background loaded');
@@ -169,6 +169,30 @@ async function applyAllowRule() {
 let allowTimer = null;
 function scheduleAllow() { clearTimeout(allowTimer); allowTimer = setTimeout(applyAllowRule, 400); }
 
+// --- Calm mode (the quiet room) ----------------------------------------------
+// Places with posture 'calm' get utils/calm.js as a registered content script,
+// scoped to exactly the hosts their pack tends. Registered scripts persist
+// across worker restarts AND extension updates, so this always reconciles from
+// settings instead of assuming a clean slate. Peeks get their own short-lived
+// registration (see grantPeek) with ids under CALM_ID + '-peek-'.
+const CALM_ID = 'miru-calm';
+
+async function registerCalmScripts() {
+  try {
+    const existing = await chrome.scripting.getRegisteredContentScripts();
+    const stale = existing.filter((s) => s.id === CALM_ID).map((s) => s.id);
+    if (stale.length) await chrome.scripting.unregisterContentScripts({ ids: stale });
+  } catch (e) {}
+  const matches = placeDomains('calm')
+    .filter((d) => MiruCalm.hasPack(d))
+    .flatMap((d) => MiruCalm.CALM_PACKS[d].matches);
+  if (!matches.length) return;
+  await chrome.scripting.registerContentScripts([{
+    id: CALM_ID, matches, js: ['utils/calm.js'],
+    runAt: 'document_start', persistAcrossSessions: true
+  }]).catch((e) => console.warn('[Miru] calm register', e));
+}
+
 function isNightTime(s) {
   const now = new Date();
   const mins = now.getHours() * 60 + now.getMinutes();
@@ -194,6 +218,14 @@ async function init() {
     const sess = await DNR.getSessionRules();
     if (sess.length) await DNR.updateSessionRules({ removeRuleIds: sess.map((r) => r.id) });
   } catch (e) {}
+  // Peek calm scripts belong to session-scoped DNR rules just cleared above —
+  // sweep any that a crashed worker left behind, then reconcile calm proper.
+  try {
+    const regs = await chrome.scripting.getRegisteredContentScripts();
+    const stalePeeks = regs.filter((s) => s.id.startsWith(CALM_ID + '-peek-')).map((s) => s.id);
+    if (stalePeeks.length) await chrome.scripting.unregisterContentScripts({ ids: stalePeeks });
+  } catch (e) {}
+  await registerCalmScripts();
   await rebuildRules();
   await applyAllowRule();
   applyPeriodicBreath();
@@ -263,6 +295,7 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     await reloadSettings();
     await rebuildRules();
     await applyAllowRule();
+    if (c.places) await registerCalmScripts();
     // Only restart the periodic-breath timer when its own settings change, so
     // editing unrelated settings doesn't reset the interval.
     if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
@@ -327,6 +360,18 @@ async function grantPeek(tabId, site) {
     removeRuleIds: [id],
     addRules: [{ id, priority: 60, action: { type: 'allow' }, condition }]
   }).catch((e) => console.warn('[Miru] peek', e));
+  // A peek into a domain with a calm pack lands in the calm room, not the raw
+  // feed — a short-lived registered script (a one-shot insertCSS would be lost
+  // to the navigation that follows, and to SPA moves during the five minutes).
+  // Registered before the MIRU_PEEK handler navigates, so there's no flash.
+  if (MiruCalm.hasPack(dom)) {
+    const scriptId = CALM_ID + '-peek-' + (hasTab ? tabId : 'shared');
+    await chrome.scripting.unregisterContentScripts({ ids: [scriptId] }).catch(() => {});
+    await chrome.scripting.registerContentScripts([{
+      id: scriptId, matches: MiruCalm.CALM_PACKS[dom].matches, js: ['utils/calm.js'],
+      runAt: 'document_start', persistAcrossSessions: false
+    }]).catch(() => {});
+  }
   console.log('[Miru] peek granted', { tabId, dom, id });
   chrome.alarms.create('miru-peek-' + (hasTab ? tabId : 'shared'), { when: Date.now() + PEEK_MINUTES * 60 * 1000 });
 }
@@ -334,6 +379,7 @@ async function grantPeek(tabId, site) {
 async function endPeek(tabId) {
   await DNR.updateSessionRules({ removeRuleIds: [RID_PEEK_BASE + tabId] }).catch(() => {});
   chrome.alarms.clear('miru-peek-' + tabId);
+  await chrome.scripting.unregisterContentScripts({ ids: [CALM_ID + '-peek-' + tabId] }).catch(() => {});
   // If the tab is still on the peeked (blocked) domain when the window closes,
   // bring it back to the block — the peek was time-boxed, not a pass. DNR only
   // catches *new* requests, so a still-loaded page wouldn't stop on its own.
@@ -399,8 +445,10 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     await armPeriodicBreath();
   } else if (a.name.startsWith('miru-peek-')) {
     const rest = a.name.slice('miru-peek-'.length);
-    if (rest === 'shared') await DNR.updateSessionRules({ removeRuleIds: [RID_PEEK_BASE] }).catch(() => {});
-    else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
+    if (rest === 'shared') {
+      await DNR.updateSessionRules({ removeRuleIds: [RID_PEEK_BASE] }).catch(() => {});
+      await chrome.scripting.unregisterContentScripts({ ids: [CALM_ID + '-peek-shared'] }).catch(() => {});
+    } else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
     await checkTimeMirror();
     await rebuildRules(); // re-evaluate night-mode window
