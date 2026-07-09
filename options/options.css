@@ -185,6 +185,7 @@ input[type="range"] { width: 100%; accent-color: var(--green-primary); }
 .posture-pills { display: flex; gap: 4px; flex-shrink: 0; }
 .pill.small { font-size: 11.5px; padding: 5px 11px; }
 .posture-legend { margin-top: 14px; max-width: none; }
+.calm-health { margin-top: 10px; }
 
 /* CTA */
 .cta {
