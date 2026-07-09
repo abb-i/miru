@@ -41,10 +41,6 @@ async function loadAll() {
   renderBlockList(s.blockedSites);
   renderAllowList(s.customExcludedDomains);
 
-  // Tab limit
-  document.getElementById('tab-enabled').checked = s.tabLimitEnabled;
-  document.getElementById('tab-limit').value = s.tabLimit;
-
   // Breathing
   document.getElementById('nav-breath').checked = s.navBreathEnabled;
   selectPill('breath-mode-pills', 'mode', s.breathMode || 'list');
@@ -68,12 +64,6 @@ async function loadAll() {
 
   // Appearance
   selectPill('theme-pills', 'theme', s.theme);
-
-  // Sessions
-  renderSessions(s.focusSessions);
-
-  // Break
-  await renderBreak();
 }
 
 function selectPill(containerId, attr, value) {
@@ -120,16 +110,6 @@ function bindControls() {
   document.getElementById('block-during-only').addEventListener('change', async (e) => {
     await saveSetting('blockDuringSessionsOnly', e.target.checked);
     flashSaved();
-  });
-
-  // Tab limit
-  document.getElementById('tab-enabled').addEventListener('change', async (e) => {
-    await saveSetting('tabLimitEnabled', e.target.checked); flashSaved();
-  });
-  document.getElementById('tab-limit').addEventListener('change', async (e) => {
-    let v = clampInt(e.target.value, 1, 20, 3);
-    e.target.value = v;
-    await saveSetting('tabLimit', v); flashSaved();
   });
 
   // Breathing
@@ -185,27 +165,6 @@ function bindControls() {
   // Appearance
   bindPills('theme-pills', 'theme', async (val) => {
     await saveSetting('theme', val); applyTheme(val); flashSaved();
-  });
-
-  // Sessions: day selection + add
-  document.querySelectorAll('#fs-days .day').forEach(d =>
-    d.addEventListener('click', () => d.classList.toggle('selected')));
-  document.getElementById('fs-add').addEventListener('click', addSession);
-
-  // Break: start, or end early
-  document.getElementById('break-btn').addEventListener('click', async () => {
-    const b = await getBreakState();
-    if (b && b.until > Date.now()) {
-      await chrome.runtime.sendMessage({ type: 'MIRU_END_BREAK', silent: true });
-    } else {
-      await chrome.runtime.sendMessage({ type: 'MIRU_START_BREAK' });
-    }
-    await renderBreak();
-    flashSaved();
-  });
-  // Keep the card current when the break ends on its own.
-  chrome.storage.onChanged.addListener((c, area) => {
-    if (area === 'local' && c.breakState) renderBreak();
   });
 
   // About: walk the welcome again
@@ -384,130 +343,6 @@ function renderAllowList(domains) {
   });
 }
 
-// ---- Break --------------------------------------------------------------------
-let breakTimer = null;
-
-async function renderBreak() {
-  clearInterval(breakTimer);
-  const btn = document.getElementById('break-btn');
-  const status = document.getElementById('break-status');
-  const b = await getBreakState();
-  const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-  if (b && b.until > Date.now()) {
-    btn.disabled = false;
-    btn.textContent = 'End the break early';
-    const tick = () => {
-      const left = b.until - Date.now();
-      if (left <= 0) { renderBreak(); return; }
-      const m = Math.floor(left / 60000);
-      const s = Math.floor((left % 60000) / 1000);
-      status.textContent = `On a break — ${m}:${String(s).padStart(2, '0')} left. Blocked sites are open; breaths are resting.`;
-    };
-    tick();
-    breakTimer = setInterval(tick, 1000);
-  } else if (b && b.usedOn === today) {
-    btn.disabled = true;
-    btn.textContent = 'Take a break · 30 minutes';
-    status.textContent = 'Today’s break is spent. It returns tomorrow.';
-  } else {
-    btn.disabled = false;
-    btn.textContent = 'Take a break · 30 minutes';
-    status.textContent = '';
-  }
-}
-
-// ---- Focus sessions ---------------------------------------------------------
-async function addSession() {
-  const name = document.getElementById('fs-name').value.trim();
-  const duration = clampInt(document.getElementById('fs-duration').value, 1, 600, 45);
-  const startTime = document.getElementById('fs-start').value || '09:00';
-  const days = [...document.querySelectorAll('#fs-days .day.selected')]
-    .map(d => Number(d.dataset.day));
-
-  const s = await getSettings();
-  const session = {
-    id: 'fs_' + Date.now(),
-    name: name || 'Focus',
-    duration,
-    startTime,
-    days,
-    enabled: true
-  };
-  s.focusSessions.push(session);
-  await saveSetting('focusSessions', s.focusSessions);
-  renderSessions(s.focusSessions);
-  flashSaved();
-
-  // Reset form
-  document.getElementById('fs-name').value = '';
-  document.querySelectorAll('#fs-days .day').forEach(d => d.classList.remove('selected'));
-}
-
-const DAY_LABELS = { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' };
-
-function renderSessions(sessions) {
-  const list = document.getElementById('session-list');
-  list.innerHTML = '';
-  if (!sessions.length) {
-    const note = document.createElement('div');
-    note.className = 'empty-note';
-    note.textContent = 'No seasons planted yet.';
-    list.appendChild(note);
-    return;
-  }
-  sessions.forEach(sess => {
-    const li = document.createElement('li');
-
-    const info = document.createElement('div');
-    info.className = 'session-info';
-    const title = document.createElement('span');
-    title.textContent = sess.name;
-    const meta = document.createElement('span');
-    meta.className = 'session-meta';
-    const dayStr = (sess.days && sess.days.length)
-      ? sess.days.map(d => DAY_LABELS[d]).join(' · ')
-      : 'every day';
-    meta.textContent = `${sess.duration}m · ${sess.startTime} · ${dayStr}`;
-    info.append(title, meta);
-
-    const actions = document.createElement('div');
-    actions.className = 'session-actions';
-
-    const sw = document.createElement('label');
-    sw.className = 'switch';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = sess.enabled;
-    cb.addEventListener('change', async () => {
-      const s = await getSettings();
-      const target = s.focusSessions.find(x => x.id === sess.id);
-      if (target) target.enabled = cb.checked;
-      await saveSetting('focusSessions', s.focusSessions);
-      flashSaved();
-    });
-    const slider = document.createElement('span');
-    slider.className = 'slider';
-    sw.append(cb, slider);
-
-    const del = document.createElement('button');
-    del.className = 'remove';
-    del.textContent = '×';
-    del.addEventListener('click', async () => {
-      const s = await getSettings();
-      const next = s.focusSessions.filter(x => x.id !== sess.id);
-      await saveSetting('focusSessions', next);
-      renderSessions(next);
-      flashSaved();
-    });
-
-    actions.append(sw, del);
-    li.append(info, actions);
-    list.appendChild(li);
-  });
-}
-
 // ---- Theme ------------------------------------------------------------------
 function applyTheme(theme) {
   const setting = theme
@@ -527,10 +362,4 @@ function normalizeDomain(raw) {
   if (!v) return '';
   v = v.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].split('?')[0];
   return v;
-}
-
-function clampInt(value, min, max, fallback) {
-  let n = parseInt(value, 10);
-  if (isNaN(n)) n = fallback;
-  return Math.min(max, Math.max(min, n));
 }
