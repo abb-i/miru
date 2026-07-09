@@ -21,11 +21,6 @@ const WORDS = {
     'Not this moment.', 'Resisting gently.', 'Guarding time.',
     'Choosing depth.', 'Staying the course.', 'Tending elsewhere.'
   ],
-  tabLimit: [
-    'Is this necessary?', 'What are you looking for?',
-    'More tabs, less depth.', 'One thing at a time.',
-    'Go deep, not wide.', 'Proceed with intention.'
-  ],
   focusStart: [
     'Beginning the work.', 'Setting the field.', 'Cultivating.',
     'Planting the hours.', 'Entering.', 'Dedicating.'
@@ -43,10 +38,6 @@ const WORDS = {
     'A long visit.', 'Look up for a moment.', 'Notice the hour.',
     'Roots, or ruts?', 'Surface for air.', 'The garden waits outside.',
     'How does this feel?', 'Deep in one place.', 'The light has moved.'
-  ],
-  breakEnd: [
-    'The break is over.', 'Rested and returning.', 'Back to the field.',
-    'Well paused.', 'Picking up the thread.', 'The garden calls again.'
   ],
   firstLight: [
     'First light.', 'The day opens.', 'A fresh row to plant.',

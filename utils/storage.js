@@ -5,8 +5,6 @@ const DEFAULTS = {
   navBreathEnabled: true,            // navigation breath before chosen domains
   breathMode: 'list',                // 'list' = only breathSites | 'all' = every new site (strict)
   breathSites: [],                   // domains that meet a breath first (list mode)
-  tabLimit: 3,
-  tabLimitEnabled: true,
   periodicBreathEnabled: true,
   periodicBreathInterval: 15,        // minutes
   blockedSites: [],                  // array of domain strings
@@ -57,22 +55,9 @@ async function clearActiveSession() {
   return chrome.storage.local.remove('activeSession');
 }
 
-// Break state (ephemeral, per-device). One 30-minute break per day:
-// { until: epoch-ms, usedOn: 'YYYY-MM-DD' }. `usedOn` stays after the break
-// ends so the day's break can't be taken twice.
-async function getBreakState() {
-  const { breakState } = await chrome.storage.local.get('breakState');
-  return breakState || null;
-}
-
-async function setBreakState(state) {
-  return chrome.storage.local.set({ breakState: state });
-}
-
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     DEFAULTS, getSettings, getSetting, saveSetting, saveSettings,
-    getActiveSession, setActiveSession, clearActiveSession,
-    getBreakState, setBreakState
+    getActiveSession, setActiveSession, clearActiveSession
   };
 }

@@ -14,7 +14,6 @@
 importScripts('utils/domains.js', 'utils/storage.js', 'utils/words.js');
 
 const DNR = chrome.declarativeNetRequest;
-const SELF = chrome.runtime.getURL('');
 console.log('[Miru] background loaded');
 
 const RID_BREATH = 1, RID_ALLOW = 2, RID_NIGHT = 3, RID_BLOCK_BASE = 100, RID_ALLOWONCE_BASE = 5000, RID_PEEK_BASE = 1000000;
@@ -24,9 +23,6 @@ const PEEK_DAILY_LIMIT = 3;   // at most three five-minute peeks a day
 
 let settings = { ...DEFAULTS };
 let sessionActive = false;
-let breakActive = false;
-
-const BREAK_MINUTES = 30;
 
 // --- Rule building ----------------------------------------------------------
 function cleanDomain(d) {
@@ -53,7 +49,7 @@ async function rebuildRules() {
   const blockUrl = chrome.runtime.getURL('screens/block.html');
   const add = [];
 
-  if (settings.navBreathEnabled && !breakActive) {
+  if (settings.navBreathEnabled) {
     // GET only: a cross-site POST (bank 3-D Secure, SSO form_post) carries a
     // body that a redirect-then-continue would silently drop.
     const base = { regexFilter: '^https?://.*', resourceTypes: ['main_frame'], requestMethods: ['get'] };
@@ -98,7 +94,7 @@ async function rebuildRules() {
     });
   }
 
-  const blockOn = !breakActive && settings.blockedSites && settings.blockedSites.length &&
+  const blockOn = settings.blockedSites && settings.blockedSites.length &&
     (!settings.blockDuringSessionsOnly || sessionActive);
   if (blockOn) {
     const exceptions = customExceptionsDNR();
@@ -194,11 +190,6 @@ function isNightTime(s) {
 async function init() {
   await reloadSettings();
   sessionActive = !!(await getActiveSession());
-  // Restore a break that was running when the worker restarted, and re-arm
-  // its end alarm so it still closes on time.
-  const brk = await getBreakState();
-  breakActive = !!(brk && brk.until > Date.now());
-  if (breakActive) chrome.alarms.create('miru-break-end', { when: brk.until });
   // Restore a periodic breath that was armed but not yet delivered before the
   // worker slept, so its rhythm survives the restart.
   const { breathDue: bd } = await chrome.storage.local.get('breathDue');
@@ -246,10 +237,9 @@ chrome.runtime.onInstalled.addListener(async (details) => {
 });
 chrome.runtime.onStartup.addListener(init);
 reloadSettings(); // keep `settings` warm for messaging on every worker wake
-// Same for the session/break flags — rebuildRules on a fresh worker must not
-// see them stale-false and drop rules mid-session or re-block mid-break.
+// Same for the session flag — rebuildRules on a fresh worker must not see it
+// stale-false and drop rules mid-session.
 getActiveSession().then((s) => { sessionActive = !!s; });
-getBreakState().then((b) => { breakActive = !!(b && b.until > Date.now()); });
 
 chrome.storage.onChanged.addListener(async (c, area) => {
   if (area === 'sync') {
@@ -261,11 +251,6 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
   }
   if (area === 'local' && c.activeSession) { sessionActive = !!c.activeSession.newValue; await rebuildRules(); }
-  if (area === 'local' && c.breakState) {
-    const b = c.breakState.newValue;
-    breakActive = !!(b && b.until > Date.now());
-    await rebuildRules();
-  }
 });
 
 // --- Allow-once (post-breath continue) --------------------------------------
@@ -338,7 +323,7 @@ async function endPeek(tabId) {
   let tab;
   try { tab = await chrome.tabs.get(tabId); } catch (e) { return; } // tab gone
   if (!tab || !/^https?:\/\//i.test(tab.url || '')) return;
-  const blockOn = !breakActive && settings.blockedSites && settings.blockedSites.length &&
+  const blockOn = settings.blockedSites && settings.blockedSites.length &&
     (!settings.blockDuringSessionsOnly || sessionActive);
   if (!blockOn) return;
   let host = '';
@@ -362,76 +347,8 @@ chrome.tabs.onRemoved.addListener((id) => {
   endPeek(id);
   scheduleAllow();
 });
-// Resolve with a tab's destination URL once it commits, or null if it isn't a
-// real http(s) link. Tells a link's new tab (opened blank, navigated a beat
-// later) apart from a genuinely empty new tab. Resolves as soon as *any*
-// destination commits — an http(s) URL → that link; anything else (e.g.
-// chrome://newtab) → null — so an empty new tab never waits out the timeout.
-// about:blank/empty are the transient pre-navigation state, so we keep waiting.
-function waitForNav(tabId, ms) {
-  return new Promise((resolve) => {
-    let done = false;
-    const finish = (v) => { if (done) return; done = true; chrome.tabs.onUpdated.removeListener(onUpd); clearTimeout(timer); resolve(v); };
-    const decide = (u) => { if (u && u !== 'about:blank') finish(/^https?:\/\//i.test(u) ? u : null); };
-    const onUpd = (id, info) => { if (id === tabId) decide(info.url || ''); };
-    chrome.tabs.onUpdated.addListener(onUpd);
-    // The navigation may have already populated the tab before we attached.
-    chrome.tabs.get(tabId, (tab) => {
-      if (chrome.runtime.lastError) return; // tab gone
-      decide(tab && (tab.pendingUrl || tab.url) || '');
-    });
-    const timer = setTimeout(() => finish(null), ms);
-  });
-}
-
-chrome.tabs.onCreated.addListener(async (tab) => {
-  scheduleAllow();
-  const u = tab.pendingUrl || tab.url || '';
-  if (u.startsWith(SELF)) return;
-  if (!settings.tabLimitEnabled) return;
-  const tabs = await chrome.tabs.query({ currentWindow: true });
-  if (tabs.length <= (settings.tabLimit || 3)) return;
-  // Over the limit: show the gentle reminder ("go deep, not wide"). But a tab
-  // opened with a real destination (link target=_blank, window.open) must not
-  // lose it — capture the URL so "Continue" can still take the user there. The
-  // tab is often created blank and navigates a beat later, so if the URL isn't
-  // on it yet (openerTabId means it came from a page), wait briefly for it.
-  let target = /^https?:\/\//i.test(u) ? u : '';
-  if (!target && tab.openerTabId != null) target = (await waitForNav(tab.id, 1500)) || '';
-  const url = chrome.runtime.getURL('screens/tablimit.html') +
-    '?count=' + tabs.length + '&theme=' + settings.theme +
-    (target ? '&target=' + encodeURIComponent(target) : '');
-  chrome.tabs.update(tab.id, { url }).catch(() => {});
-});
+chrome.tabs.onCreated.addListener(() => scheduleAllow());
 chrome.tabs.onActivated.addListener(() => { updateActive(); if (breathDue) maybeDeliverBreath(); });
-
-// --- Breaks -------------------------------------------------------------------
-// One 30-minute break per day: blocked sites open again and the navigation
-// breath rests. Ending early doesn't refund the day's break.
-async function startBreak() {
-  const prev = await getBreakState();
-  if (prev && prev.usedOn === todayKey()) {
-    return prev.until > Date.now()
-      ? { ok: true, until: prev.until }
-      : { ok: false, reason: 'used' };
-  }
-  const until = Date.now() + BREAK_MINUTES * 60 * 1000;
-  await setBreakState({ until, usedOn: todayKey() });
-  breakActive = true;
-  await rebuildRules();
-  chrome.alarms.create('miru-break-end', { when: until });
-  return { ok: true, until };
-}
-
-async function endBreak({ silent } = {}) {
-  const wasActive = breakActive;
-  const prev = await getBreakState();
-  if (prev && prev.until > Date.now()) await setBreakState({ ...prev, until: Date.now() });
-  breakActive = false;
-  chrome.alarms.clear('miru-break-end');
-  await rebuildRules();
-  if (wasActive && !silent) showBreath('breakEnd', settings.breathDuration || 10);
-}
 
 // --- Focus sessions ---------------------------------------------------------
 async function startSession({ name, duration }) {
@@ -456,10 +373,8 @@ chrome.alarms.onAlarm.addListener(async (a) => {
   // The worker may have just woken for this alarm; make sure settings are fresh.
   await reloadSettings();
   if (a.name === 'miru-session-end') await endSession();
-  else if (a.name === 'miru-break-end') await endBreak();
   else if (a.name === 'miru-periodic') {
     if (!settings.periodicBreathEnabled) { chrome.alarms.clear('miru-periodic'); return; }
-    if (breakActive) return; // the break is a rest from the rhythm too
     // Arm, don't fire: the breath waits for the next natural seam (a tab switch
     // or a finished navigation) so it rides a transition instead of cutting in.
     // A single latched flag means being away just leaves it armed — no pile-up.
@@ -469,7 +384,6 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     if (rest === 'shared') await DNR.updateSessionRules({ removeRuleIds: [RID_PEEK_BASE] }).catch(() => {});
     else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
-    await checkScheduled();
     await checkTimeMirror();
     await rebuildRules(); // re-evaluate night-mode window
   }
@@ -480,7 +394,7 @@ chrome.alarms.onAlarm.addListener(async (a) => {
 // judgment. `tracker.start` marks when the current continuous stay began
 // (recordElapsed resets `since` for accounting but preserves `start`).
 async function checkTimeMirror() {
-  if (!settings.timeMirrorEnabled || breakActive) return;
+  if (!settings.timeMirrorEnabled) return;
   const { tracker } = await chrome.storage.local.get('tracker');
   if (!tracker || !tracker.domain || !tracker.start) return;
   const thresholdMs = Math.max(5, settings.timeMirrorMinutes || 20) * 60000;
@@ -497,21 +411,7 @@ async function checkTimeMirror() {
   });
 }
 
-async function checkScheduled() {
-  const sessions = settings.focusSessions || [];
-  if (!sessions.length || (await getActiveSession())) return;
-  const now = new Date();
-  const day = now.getDay();
-  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-  for (const fs of sessions) {
-    if (!fs.enabled || fs.startTime !== hhmm) continue;
-    if (Array.isArray(fs.days) && fs.days.length && !fs.days.includes(day)) continue;
-    await startSession({ name: fs.name, duration: fs.duration || 25 });
-    break;
-  }
-}
-
-// --- Standalone breath (manual / session end / break end / mirror / periodic)
+// --- Standalone breath (manual / session end / mirror / periodic) -----------
 // Prefer an in-page overlay painted onto the tab the user is already looking at
 // — no context switch, nothing new in the app switcher, and dismissing it never
 // closes their actual work. Fall back to a fullscreen window only where a page
@@ -613,7 +513,7 @@ async function armPeriodicBreath() {
 }
 
 async function maybeDeliverBreath() {
-  if (!breathDue || delivering || breakActive) return;
+  if (!breathDue || delivering) return;
   if (Date.now() - lastBreathAt < 60000) return;   // just breathed — let it settle
   let state = 'active';
   try { state = await chrome.idle.queryState(60); } catch (e) {}
@@ -699,9 +599,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         break;
       }
       case 'MIRU_GET_STATE': {
-        const session = await getActiveSession();
-        const tabs = await chrome.tabs.query({ currentWindow: true });
-        sendResponse({ session, tabCount: tabs.length });
+        sendResponse({ session: await getActiveSession() });
         break;
       }
       case 'MIRU_GET_USAGE': {
@@ -726,16 +624,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ ok: true, navigated, remaining: await peekRemaining() });
         break;
       }
-      case 'MIRU_START_BREAK': sendResponse(await startBreak()); break;
-      case 'MIRU_END_BREAK': await endBreak({ silent: msg.silent }); sendResponse({ ok: true }); break;
       case 'MIRU_START_SESSION': sendResponse({ session: await startSession({ name: msg.name, duration: msg.duration }) }); break;
       case 'MIRU_END_SESSION': await endSession({ silent: msg.silent }); sendResponse({ ok: true }); break;
-      case 'MIRU_CLOSE_TAB': {
-        const id = msg.tabId || (sender.tab && sender.tab.id);
-        if (id) await chrome.tabs.remove(id).catch(() => {});
-        sendResponse({ ok: true });
-        break;
-      }
       default: sendResponse({ ok: false });
     }
   })();

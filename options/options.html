@@ -21,9 +21,6 @@
       <nav class="nav">
         <button class="nav-item active" data-target="sec-breath">Breathing</button>
         <button class="nav-item" data-target="sec-blocked">Blocked Sites</button>
-        <button class="nav-item" data-target="sec-tabs">Tab Limit</button>
-        <button class="nav-item" data-target="sec-sessions">Focus Sessions</button>
-        <button class="nav-item" data-target="sec-break">Break</button>
         <button class="nav-item" data-target="sec-appearance">Appearance</button>
         <button class="nav-item" data-target="sec-about">About</button>
         <button class="nav-item" data-target="sec-legal">Legal</button>
@@ -33,57 +30,6 @@
 
     <!-- Content -->
     <main class="content">
-
-      <!-- Focus Sessions -->
-      <section class="section" id="sec-sessions">
-        <h2 class="heading">Focus Sessions</h2>
-        <p class="sub">Name the seasons of your work. Sessions can repeat on a rhythm.</p>
-
-        <div class="card">
-          <div class="field">
-            <label>Name</label>
-            <input type="text" id="fs-name" placeholder="Deep work" />
-          </div>
-          <div class="field-row">
-            <div class="field">
-              <label>Duration (minutes)</label>
-              <input type="number" id="fs-duration" value="45" min="1" max="600" />
-            </div>
-            <div class="field">
-              <label>Start time</label>
-              <input type="time" id="fs-start" value="09:00" />
-            </div>
-          </div>
-          <div class="field">
-            <label>Repeat</label>
-            <div class="days" id="fs-days">
-              <button class="day" data-day="1">Mon</button>
-              <button class="day" data-day="2">Tue</button>
-              <button class="day" data-day="3">Wed</button>
-              <button class="day" data-day="4">Thu</button>
-              <button class="day" data-day="5">Fri</button>
-              <button class="day" data-day="6">Sat</button>
-              <button class="day" data-day="0">Sun</button>
-            </div>
-          </div>
-          <button class="cta" id="fs-add">Plant the session.</button>
-        </div>
-
-        <ul class="session-list" id="session-list"></ul>
-      </section>
-
-      <!-- Break -->
-      <section class="section" id="sec-break">
-        <h2 class="heading">Break</h2>
-        <p class="sub">A healthy balance includes rest. Once a day, step away from the rules.</p>
-
-        <div class="card">
-          <div class="toggle-title">Take today's break</div>
-          <div class="toggle-desc">For 30 minutes, blocked sites open again and no breath is asked before entering a site. One break per day — spend it well.</div>
-          <button class="cta" id="break-btn">Take a break · 30 minutes</button>
-          <div class="break-status" id="break-status"></div>
-        </div>
-      </section>
 
       <!-- Blocked Sites -->
       <section class="section" id="sec-blocked">
@@ -118,29 +64,6 @@
               <input type="checkbox" id="block-during-only" />
               <span class="slider"></span>
             </label>
-          </div>
-        </div>
-      </section>
-
-      <!-- Tab Limit -->
-      <section class="section" id="sec-tabs">
-        <h2 class="heading">Tab Limit</h2>
-        <p class="sub">Go deep, not wide.</p>
-
-        <div class="card">
-          <div class="toggle-row">
-            <div>
-              <div class="toggle-title">Enable tab limit</div>
-              <div class="toggle-desc">Opening beyond this limit meets a gentle question first — close a tab, or continue knowingly.</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="tab-enabled" />
-              <span class="slider"></span>
-            </label>
-          </div>
-          <div class="field">
-            <label>Maximum tabs</label>
-            <input type="number" id="tab-limit" value="3" min="1" max="20" />
           </div>
         </div>
       </section>

@@ -9,7 +9,6 @@
     placesAction: 'breathe', // what the chosen places meet: a breath, or a block
     blocked: new Set(),
     breath: 10,          // seconds → rounded to whole cycles by the overlay
-    tab: 3,              // 0 = no limit
     periodic: 15,        // minutes, 0 = off
     night: false,
     pattern: 'settle',
@@ -18,10 +17,10 @@
 
   // How the first answer shapes the suggestions that follow.
   const PRESETS = {
-    scroll:   { breath: 10, tab: 5, periodic: 15, night: false },
-    deep:     { breath: 25, tab: 3, periodic: 30, night: false },
-    evenings: { breath: 10, tab: 5, periodic: 0,  night: true, from: '21:00' },
-    all:      { breath: 10, tab: 3, periodic: 15, night: true }
+    scroll:   { breath: 10, periodic: 15, night: false },
+    deep:     { breath: 25, periodic: 30, night: false },
+    evenings: { breath: 10, periodic: 0,  night: true, from: '21:00' },
+    all:      { breath: 10, periodic: 15, night: true }
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -77,11 +76,9 @@
   function applyPreset(p) {
     if (!p) return;
     state.breath = p.breath;
-    state.tab = p.tab;
     state.periodic = p.periodic;
     state.night = p.night;
     selectPill('breath-pills', p.breath);
-    selectPill('tab-pills', p.tab);
     selectPill('periodic-pills', p.periodic);
     $('#night-toggle').checked = p.night;
     $('#night-times').classList.toggle('on', p.night);
@@ -142,10 +139,8 @@
     }));
   }
   selectPill('breath-pills', state.breath);
-  selectPill('tab-pills', state.tab);
   selectPill('periodic-pills', state.periodic);
   bindPills('breath-pills', (v) => { state.breath = Number(v); });
-  bindPills('tab-pills', (v) => { state.tab = Number(v) || 0; });
   bindPills('periodic-pills', (v) => { state.periodic = Number(v) || 0; });
 
   // ---- 4 · Evenings -----------------------------------------------------------
@@ -191,10 +186,8 @@
       nightModeEnabled: state.night,
       nightModeStart: $('#night-from').value || '22:00',
       nightModeEnd: $('#night-until').value || '07:00',
-      tabLimitEnabled: state.tab > 0,
       periodicBreathEnabled: state.periodic > 0
     };
-    if (state.tab > 0) payload.tabLimit = state.tab;
     if (state.periodic > 0) payload.periodicBreathInterval = state.periodic;
     // The chosen places land on the list the user picked: breath (gentle,
     // default) or block (firm). breathMode stays 'list' — strict "every new
