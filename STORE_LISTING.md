@@ -8,15 +8,15 @@ Miru is a mindful-browsing companion: users name the sites that pull at them
 and give each a posture — a brief guided breath before entry; a "calm" mode
 that additionally hides algorithmic feed elements (currently on YouTube and
 Instagram) while search, messages, and profiles keep working; or a gentle
-block with a rationed five-minute stay. Focus sessions and a nightly quiet
-period round it out. All features serve the single purpose of intentional,
-calmer browsing.
+block with a rationed five-minute stay. Focus sessions and a nightly
+grayscale wind-down round it out. All features serve the single purpose of
+intentional, calmer browsing.
 
 ## Permission justifications
 
 **declarativeNetRequest** — Core mechanism. Redirects navigations to the
-extension's own breathing pause, block page, or night page, according to the
-user's settings. No request data is read or modified beyond these redirects.
+extension's own breathing pause or block page, according to the user's
+settings. No request data is read or modified beyond these redirects.
 
 **host_permissions (`<all_urls>`)** — Users may give any site they choose a
 breathing pause or a block; the redirect rules therefore need to match any
@@ -29,11 +29,13 @@ own breathing exercise as a temporary overlay on the user's current tab
 periodic reminder, session endings, and the time mirror (`utils/words.js`,
 `utils/overlay.js`). (2) For sites the user sets to "calm" (packs currently
 exist for YouTube and Instagram), registers `utils/calm.js` as a content
-script scoped to exactly those hosts; it hides feed/Shorts/Reels/
-recommendation elements with CSS and shows a small note. No page content is
-read, evaluated, or transmitted; the only storage write is a local flag when
-a hiding selector no longer matches, so the options page can say the pack is
-out of date.
+script scoped to exactly those hosts; it hides feed/Shorts/Reels/Explore
+elements with CSS and shows a small note. (3) Applies a bundled grayscale
+stylesheet during the user's chosen night hours, and briefly to the current
+tab in the minute before an optional periodic breathing reminder. No page
+content is read, evaluated, or transmitted; the only storage write is a local
+flag when a hiding selector no longer matches, so the options page can say
+the pack is out of date.
 
 **tabs** — Used to (1) know which site is active so the popup can show today's
 per-site time, (2) redirect a tab to the block page when the user blocks a
@@ -41,8 +43,9 @@ site that is already open, and (3) exempt already-open sites from the
 breathing pause.
 
 **storage** — Saves the user's settings (sync) and local state (today's usage
-totals, the running focus session, the daily counter for brief "stay five
-minutes" unblocks, and a local flag when a calm-mode selector stops matching).
+totals, the running focus session, the daily intention words shown on the
+local journal page, the daily counter for brief "stay five minutes" unblocks,
+and a local flag when a calm-mode selector stops matching).
 Nothing is transmitted.
 
 **alarms** — Ends focus sessions on time, runs the optional periodic breathing

@@ -59,7 +59,17 @@
   // The ritual happened either way — don't ask again until tomorrow.
   async function markFirstLight(word) {
     if (!firstLight) return;
-    await chrome.storage.local.set({ firstLight: { date: today, intention: (word || '').trim() } }).catch(() => {});
+    const intention = (word || '').trim();
+    await chrome.storage.local.set({ firstLight: { date: today, intention } }).catch(() => {});
+    // Each carried word also settles into the journal — one word per day,
+    // kept on this device (screens/journal.html shows the collection).
+    if (intention) {
+      try {
+        const { journal = {} } = await chrome.storage.local.get('journal');
+        journal[today] = intention;
+        await chrome.storage.local.set({ journal });
+      } catch (e) {}
+    }
   }
 
   MiruOverlay.injectFonts();

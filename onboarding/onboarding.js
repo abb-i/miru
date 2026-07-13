@@ -38,6 +38,7 @@
     const di = DOT_STEPS.indexOf(step);
     dots.hidden = di === -1;
     corner.hidden = !(step >= 1 && step <= 4);
+    $('#go-back').hidden = !(step >= 1 && step <= 5);
     $$('#dots i').forEach((d, i) => {
       d.classList.toggle('here', i === di);
       d.classList.toggle('past', di !== -1 && i < di);
@@ -46,6 +47,7 @@
 
   $$('[data-next]').forEach((b) => b.addEventListener('click', () => goTo(current + 1)));
   $('#keep-defaults').addEventListener('click', () => goTo(5));
+  $('#go-back').addEventListener('click', () => goTo(Math.max(0, current - 1)));
 
   // ---- Welcome: the spiral breathes on its own ---------------------------
   (function idleBreath() {

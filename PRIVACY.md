@@ -52,6 +52,11 @@ falls das Beruhigen einer Website nicht mehr greift (nur der Domainname).
 Speicherort: `chrome.storage.local`.
 Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.
 
+**d) Journal** — das eine Wort, das Sie beim ersten Atemzug des Tages wählen,
+angezeigt auf der lokalen Journal-Seite der Erweiterung.
+Speicherort: `chrome.storage.local` (nur dieses Gerät).
+Speicherdauer: bis zur Deinstallation.
+
 Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO
 vorliegt, ist Rechtsgrundlage Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der
 von Ihnen gewünschten Funktionen).
@@ -104,16 +109,17 @@ Miru fordert Browser-Berechtigungen ausschließlich zur lokalen
 Funktionserbringung an:
 
 - **declarativeNetRequest** und Zugriff auf alle Websites: Umleitung von
-  Navigationen auf die erweiterungseigene Atem-, Blockier- oder Nachtseite
-  gemäß Ihren Einstellungen. Seiteninhalte werden dabei nicht gelesen.
+  Navigationen auf die erweiterungseigene Atem- oder Blockierseite gemäß
+  Ihren Einstellungen. Seiteninhalte werden dabei nicht gelesen.
 - **scripting**: Einblenden der erweiterungseigenen Atem-Übung als
   vorübergehende Überlagerung direkt auf der gerade geöffneten Seite (statt in
-  einem eigenen Fenster) sowie Ausblenden ablenkender Feed-Elemente
-  (Empfehlungen, Shorts, Reels, Explore) durch mitgelieferte Stylesheets auf
+  einem eigenen Fenster), Ausblenden ablenkender Feed-Elemente
+  (Feeds, Shorts, Reels, Explore) durch mitgelieferte Stylesheets auf
   den Websites, die Sie auf „Beruhigen" gestellt haben (derzeit YouTube und
-  Instagram). Es wird ausschließlich mitgelieferter Code der Erweiterung
-  ausgeführt; Seiteninhalte werden weder gelesen noch ausgewertet noch
-  übermittelt.
+  Instagram), sowie Anwenden eines mitgelieferten Graustufen-Stylesheets
+  während Ihrer Nachtstunden und kurzzeitig vor einer Atem-Erinnerung. Es wird
+  ausschließlich mitgelieferter Code der Erweiterung ausgeführt;
+  Seiteninhalte werden weder gelesen noch ausgewertet noch übermittelt.
 - **tabs**: Erkennen der aktiven Website (Zeitanzeige), Umleiten bereits
   geöffneter blockierter Seiten.
 - **storage**: lokale Speicherung gemäß Ziffer 3.
@@ -195,6 +201,9 @@ storage (`chrome.storage`):
   sites ("stay five minutes"), and a technical note (domain name only) if
   calming a site no longer takes effect. Stored locally until it expires or
   is resolved.
+- **Journal** — the one word you choose at the first breath of each day,
+  shown on the extension's local journal page. Stored in
+  `chrome.storage.local` (this device only) until you uninstall.
 
 Where this constitutes processing of personal data under the GDPR, the legal
 basis is Art. 6(1)(b) GDPR (providing the features you requested).
@@ -240,13 +249,14 @@ purpose.
 
 Miru requests browser permissions solely to work locally:
 **declarativeNetRequest** + access to all sites (redirecting navigations to
-its own breath/block/night pages per your settings; page content is never
+its own breath/block pages per your settings; page content is never
 read), **scripting** (drawing the extension's own breathing exercise as a
 temporary overlay on the page you're viewing instead of opening a separate
-window, and hiding distracting feed elements — recommendations, Shorts,
-Reels, Explore — with bundled stylesheets on the sites you set to "calm",
-currently YouTube and Instagram; only bundled extension code runs, and page
-content is never read, evaluated, or transmitted), **tabs** (active site for
+window, hiding distracting feed elements — feeds, Shorts, Reels, Explore —
+with bundled stylesheets on the sites you set to "calm", currently YouTube
+and Instagram, and applying a bundled grayscale stylesheet during your night
+hours and briefly before a periodic breath; only bundled extension code runs,
+and page content is never read, evaluated, or transmitted), **tabs** (active site for
 the time display, redirecting already-open blocked tabs), **storage**
 (section 3), **alarms** (timed features, including ending a brief unblock),
 **idle** (no reminders while you're away).

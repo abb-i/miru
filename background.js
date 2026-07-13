@@ -6,11 +6,13 @@
 //
 // Rules (priority high→low):
 //   block (10)    redirect places with posture 'block' → block.html
-//   night (8)     during night hours, redirect all → block.html?night=1
 //   allow-once    (session, 100) per-tab pass-through right after "continue"
 //   peek (60)     (session) five-minute pass into a blocked domain, per tab
 //   allow (5)     domains currently open in some tab → no breath (internal nav)
 //   breath (1)    redirect places with posture 'breathe'/'calm' → breath.html?target=…
+//
+// Night is not a rule: during the night window the whole web fades to
+// grayscale instead (see applyNightGray) — a wind-down, not a wall.
 
 importScripts('utils/domains.js', 'utils/storage.js', 'utils/words.js', 'utils/calm.js');
 
@@ -70,20 +72,6 @@ async function rebuildRules() {
     add.push({
       id: RID_BREATH, priority: 1,
       action: { type: 'redirect', redirect: { regexSubstitution: breathUrl + '?target=\\0' } },
-      condition
-    });
-  }
-
-  if (settings.nightModeEnabled && isNightTime(settings)) {
-    // Night means night: only the user's own exceptions stay reachable.
-    // ALWAYS_EXCLUDED (Google) is deliberately NOT carved out here — it exempts
-    // sites from tracking, not from the night pause.
-    const nightExcluded = customExceptionsDNR();
-    const condition = { regexFilter: '^https?://.*', resourceTypes: ['main_frame'] };
-    if (nightExcluded.length) condition.excludedRequestDomains = nightExcluded;
-    add.push({
-      id: RID_NIGHT, priority: 8,
-      action: { type: 'redirect', redirect: { url: blockUrl + '?night=1' } },
       condition
     });
   }
@@ -203,6 +191,72 @@ function isNightTime(s) {
   return start < end ? (mins >= start && mins < end) : (mins >= start || mins < end);
 }
 
+function isCustomExcepted(url) {
+  let host = '';
+  try { host = new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch { return false; }
+  return customExceptionsDNR().some((e) => host === e || host.endsWith('.' + e));
+}
+
+// --- Night gray (the web loses its color until morning) ----------------------
+// Everything stays reachable at night; it just renders gray. All applications
+// go through insertCSS with the same bundled file, so leaving the window can
+// removeCSS them again — a registered content script's CSS would outlive its
+// own unregistration on already-loaded pages. New pages are grayed from the
+// tabs.onUpdated listener while the window holds.
+let nightGrayOn = false;
+chrome.storage.local.get('nightGrayOn').then(({ nightGrayOn: v }) => { nightGrayOn = !!v; });
+
+async function applyNightGray() {
+  const on = !!(settings.nightModeEnabled && isNightTime(settings));
+  const { nightGrayOn: stored = false } = await chrome.storage.local.get('nightGrayOn');
+  nightGrayOn = on;
+  if (on === stored) return;
+  await chrome.storage.local.set({ nightGrayOn: on });
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
+  for (const t of tabs) {
+    if (on) grayNightTab(t);
+    else chrome.scripting.removeCSS({ target: { tabId: t.id }, files: ['utils/gray.css'] }).catch(() => {});
+  }
+}
+
+function grayNightTab(tab) {
+  if (!tab || tab.id == null || !/^https?:\/\//i.test(tab.url || '')) return;
+  if (isCustomExcepted(tab.url)) return;  // exceptions keep their color
+  chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['utils/gray.css'] }).catch(() => {});
+}
+
+// --- Gray prep (one minute before each periodic breath) ----------------------
+// The page fades to grayscale over the minute before the breath is armed, so
+// the pause is prepared for rather than sprung. Color returns the moment the
+// breath is delivered; the breath itself and everything after are normal.
+const GRAY_PREP_CSS = 'html{filter:grayscale(1) !important;transition:filter 55s linear !important;}';
+let grayPrepTabs = new Set();
+
+async function grayPrepStart() {
+  if (!settings.periodicBreathEnabled) return;
+  if (Date.now() - lastBreathAt < 60000) return;   // just breathed — no prep needed
+  let state = 'active';
+  try { state = await chrome.idle.queryState(60); } catch (e) {}
+  if (state !== 'active') return;                  // not here — nothing to prepare
+  const tab = await activeHostTab();
+  if (!tab || grayPrepTabs.has(tab.id)) return;
+  try {
+    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, css: GRAY_PREP_CSS });
+    grayPrepTabs.add(tab.id);
+    await chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] });
+  } catch (e) {}
+}
+
+async function clearGrayPrep() {
+  const ids = [...grayPrepTabs];
+  grayPrepTabs.clear();
+  await chrome.storage.local.remove('grayPrepTabs').catch(() => {});
+  for (const id of ids) {
+    chrome.scripting.removeCSS({ target: { tabId: id }, css: GRAY_PREP_CSS }).catch(() => {});
+  }
+}
+
 // --- Lifecycle --------------------------------------------------------------
 async function init() {
   await reloadSettings();
@@ -228,6 +282,11 @@ async function init() {
   await registerCalmScripts();
   await rebuildRules();
   await applyAllowRule();
+  // Un-gray tabs a sleeping/crashed worker left mid-prep, then reconcile night.
+  const { grayPrepTabs: stale = [] } = await chrome.storage.local.get('grayPrepTabs');
+  grayPrepTabs = new Set(stale);
+  await clearGrayPrep();
+  await applyNightGray();
   applyPeriodicBreath();
   chrome.alarms.create('miru-schedule', { periodInMinutes: 1 });
   try { chrome.idle.setDetectionInterval(60); } catch (e) {}
@@ -239,13 +298,18 @@ async function reloadSettings() { settings = await getSettings(); }
 // enabled flag or interval actually changes (or on worker init).
 function applyPeriodicBreath() {
   chrome.alarms.clear('miru-periodic');
+  chrome.alarms.clear('miru-periodic-prep');
   if (settings.periodicBreathEnabled) {
     const m = settings.periodicBreathInterval || 15;
     chrome.alarms.create('miru-periodic', { periodInMinutes: m, delayInMinutes: m });
+    // The prep runs the same rhythm, one minute ahead: the page fades to gray
+    // so the coming pause is prepared for, not sprung.
+    if (m > 1) chrome.alarms.create('miru-periodic-prep', { periodInMinutes: m, delayInMinutes: m - 1 });
   } else {
     // Turned off: drop any breath that was armed but not yet delivered.
     breathDue = null;
     chrome.storage.local.remove('breathDue').catch(() => {});
+    clearGrayPrep();
   }
 }
 
@@ -295,6 +359,7 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     await reloadSettings();
     await rebuildRules();
     await applyAllowRule();
+    await applyNightGray();
     if (c.places) await registerCalmScripts();
     // Only restart the periodic-breath timer when its own settings change, so
     // editing unrelated settings doesn't reset the interval.
@@ -323,7 +388,7 @@ async function allowOnce(tabId, targetUrl) {
 // From the block screen the user can choose to step into a blocked site for a
 // few minutes. Scoped to that domain in that tab: internal navigation flows (a
 // channel to a video) but other blocked sites stay shut. Priority sits above
-// the block (10) and night (8), below the post-breath pass (100). An alarm ends
+// the block (10), below the post-breath pass (100). An alarm ends
 // it — a service-worker setTimeout wouldn't survive the worker sleeping.
 //
 // Peeks are rationed: PEEK_DAILY_LIMIT a day, counted in storage.local as
@@ -403,12 +468,16 @@ async function endPeek(tabId) {
 chrome.tabs.onUpdated.addListener((id, info, tab) => {
   if (info.status === 'complete') DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   if (info.url || info.status === 'complete') { scheduleAllow(); updateActive(); }
+  if (nightGrayOn && info.status === 'complete') grayNightTab(tab);
+  // A navigation cleared any prep CSS with the page it was injected into.
+  if (info.url && grayPrepTabs.delete(id)) chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] }).catch(() => {});
   // A finished navigation on the active tab is a natural seam for an armed breath.
   if (breathDue && info.status === 'complete' && tab && tab.active) maybeDeliverBreath();
 });
 chrome.tabs.onRemoved.addListener((id) => {
   DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   endPeek(id);
+  if (grayPrepTabs.delete(id)) chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] }).catch(() => {});
   scheduleAllow();
 });
 chrome.tabs.onCreated.addListener(() => scheduleAllow());
@@ -443,6 +512,9 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     // or a finished navigation) so it rides a transition instead of cutting in.
     // A single latched flag means being away just leaves it armed — no pile-up.
     await armPeriodicBreath();
+  } else if (a.name === 'miru-periodic-prep') {
+    if (settings.periodicBreathEnabled) await grayPrepStart();
+    else chrome.alarms.clear('miru-periodic-prep');
   } else if (a.name.startsWith('miru-peek-')) {
     const rest = a.name.slice('miru-peek-'.length);
     if (rest === 'shared') {
@@ -451,7 +523,7 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     } else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
     await checkTimeMirror();
-    await rebuildRules(); // re-evaluate night-mode window
+    await applyNightGray(); // re-evaluate the night window
   }
 });
 
@@ -590,6 +662,7 @@ async function maybeDeliverBreath() {
   const due = breathDue;
   breathDue = null;
   await chrome.storage.local.remove('breathDue').catch(() => {});
+  await clearGrayPrep();   // color returns with the breath
   lastBreathAt = Date.now();
   const opts = { theme: resolveTheme(), pool: due.pool, duration: due.duration,
     pattern: settings.breathPattern, mirror: '', minutes: '' };

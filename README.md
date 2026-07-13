@@ -31,8 +31,10 @@ Around the postures:
   and a gentle notice when you've been in one place a long time. Breaths appear
   as a calm overlay on the page you're already on, at a natural pause (a tab
   switch, a finished navigation) — not as another window cutting in.
-- **Night mode** — the browser rests when you should.
+- **Night mode** — during your night hours the web loses its color: everything
+  still works, in quiet grayscale, easing you toward rest.
 - **First light** — the first breath of the day asks for one word to carry.
+  Each word settles into a local journal, one line per day.
 
 ## Privacy — verify it yourself
 
