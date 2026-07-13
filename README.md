@@ -72,8 +72,11 @@ except for the manifest:
 1. Download or clone this repository.
 2. Open `about:debugging#/runtime/this-firefox`.
 3. Click **Load Temporary Add-on…** and select `firefox/manifest.json`.
-   (Temporary add-ons are removed when Firefox closes; the permanent way is
-   the Firefox Add-ons listing.)
+4. In `about:addons` → Miru → **Permissions**, allow **Access your data for
+   all websites** — Firefox treats site access as optional, and Miru needs it
+   to meet you at the door. (Temporary add-ons are removed when Firefox
+   closes; the permanent way is the Firefox Add-ons listing, which asks for
+   this permission at install.)
 
 ## Fonts
 

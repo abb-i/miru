@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Journal — Miru</title>
+  <link rel="stylesheet" href="../assets/fonts/fonts.css" />
+  <link rel="stylesheet" href="journal.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="head">
+      <svg class="spiral" viewBox="0 0 48 56" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="47">
+        <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
+          stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.9" />
+      </svg>
+      <h1 class="title">Journal</h1>
+      <p class="sub">One word carried into each day. Kept only on this device.</p>
+    </header>
+
+    <ul class="entries" id="entries"></ul>
+
+    <p class="empty" id="empty" hidden>
+      No words yet.<br />The first breath of each morning asks for one.
+    </p>
+  </main>
+
+  <script src="../utils/theme.js"></script>
+  <script src="journal.js"></script>
+</body>
+</html>

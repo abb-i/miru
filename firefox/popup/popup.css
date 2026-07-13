@@ -1,0 +1,136 @@
+:root {
+  --green-deep: #0f4a2e;
+  --green-dark: #1d7a4e;
+  --green-primary: #2da96e;
+  --green-light: #7dd4a8;
+  --green-pale: #d6f2e6;
+  --green-muted: #a8dfc4;
+
+  --bg: #f7f5ef;
+  --card: #ffffff;
+  --text: #3d3d3a;
+  --muted: #888780;
+  --border: #c8c6bd;
+  --surface: #ede9df;
+  --accent: var(--green-dark);
+  --track: var(--green-pale);
+}
+
+:root[data-theme="dark"] {
+  --bg: #16160f;
+  --card: #21211a;
+  --text: #ece9df;
+  --muted: #9d9b91;
+  --border: #34332a;
+  --surface: #2a2a22;
+  --accent: var(--green-light);
+  --track: #143226;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 300px;
+  background: var(--bg);
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-weight: 300;
+  color: var(--text);
+  padding: 16px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Header */
+.header { display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 8px; }
+.wordmark {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-weight: 300; font-size: 22px; letter-spacing: 0.2em; color: var(--text);
+}
+.gear {
+  background: none; border: none; cursor: pointer; display: flex;
+  padding: 4px; border-radius: 6px; color: var(--muted);
+}
+.gear:hover { background: var(--surface); color: var(--text); }
+
+/* Today's carried word — a quiet door into the journal */
+.intention {
+  display: flex; align-items: baseline; justify-content: center; gap: 10px;
+  margin-top: -6px;
+  width: 100%; background: none; border: none; cursor: pointer;
+}
+.intention:hover .intention-label { color: var(--text); }
+.intention-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em; color: var(--muted);
+}
+.intention-word {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic; font-weight: 300; font-size: 19px; color: var(--accent);
+}
+
+/* Breath CTA */
+.breath-cta { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.cta {
+  width: 100%;
+  font-family: 'Cormorant Garamond', serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: #f7f5ef;
+  background: var(--green-primary);
+  border: none;
+  border-radius: 10px;
+  padding: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.cta:hover { background: var(--green-dark); }
+.cta-sub { font-size: 12px; color: var(--muted); }
+
+/* Focus session */
+.focus { display: flex; flex-direction: column; gap: 10px; }
+.focus-pills { display: flex; gap: 8px; margin-top: 10px; }
+.focus-pill {
+  flex: 1;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--surface);
+  border: 0.5px solid transparent;
+  border-radius: 999px;
+  padding: 8px 0;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+.focus-pill:hover { border-color: var(--green-muted); }
+.focus-end { align-self: flex-start; margin-top: 6px; }
+
+/* Usage */
+.usage { display: flex; flex-direction: column; gap: 10px; }
+.usage-head { display: flex; align-items: baseline; justify-content: space-between; }
+.label {
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
+}
+.total {
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--accent);
+}
+.usage-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.usage-list li { display: flex; flex-direction: column; gap: 4px; }
+.usage-row { display: flex; justify-content: space-between; font-size: 13px; }
+.usage-row .site { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.usage-row .time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.usage-bar { height: 3px; background: var(--track); border-radius: 3px; overflow: hidden; }
+.usage-bar-fill { height: 100%; background: var(--green-primary); }
+.empty-note { font-size: 12px; color: var(--muted); font-style: italic; }
+
+/* Footer */
+.footer { display: flex; justify-content: center; gap: 22px; padding-top: 2px; }
+.text-link {
+  font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--green-primary);
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.text-link:hover { color: var(--accent); }
