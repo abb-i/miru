@@ -1,0 +1,58 @@
+{
+  "manifest_version": 3,
+  "name": "Miru",
+  "version": "2.1.0",
+  "description": "Browse with intention. A gentle breath before the places that pull at you, and calmer feeds inside.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "miru@abb-i.github.io",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
+  "permissions": [
+    "declarativeNetRequest",
+    "tabs",
+    "storage",
+    "alarms",
+    "idle",
+    "scripting"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "scripts": [
+      "utils/domains.js",
+      "utils/storage.js",
+      "utils/words.js",
+      "utils/calm.js",
+      "background.js"
+    ]
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "assets/icon16.png",
+      "32": "assets/icon32.png",
+      "48": "assets/icon48.png",
+      "128": "assets/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/icon16.png",
+    "32": "assets/icon32.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["screens/*", "assets/fonts/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

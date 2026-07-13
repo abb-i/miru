@@ -105,8 +105,20 @@ domain; on calm-pack sites the stay lands in the calmed version.
   folder; only its `manifest.json` differs from Chrome's).
 - **Add-on ID:** `miru@abb-i.github.io` (`browser_specific_settings.gecko.id`
   in the Firefox manifest — required for `storage.sync` and stable updates).
-- **Minimum Firefox version:** 128.0 (ESR; covers every declarativeNetRequest
-  feature Miru uses).
+- **Minimum Firefox version:** 140.0 (current ESR; covers every
+  declarativeNetRequest feature Miru uses, and the
+  `data_collection_permissions` manifest key AMO requires of new submissions —
+  Miru declares `"required": ["none"]`, the truthful answer).
+- **Host permissions on Firefox:** Firefox treats MV3 site access as
+  user-controllable. It is granted in the install prompt by default, but a
+  user can revoke or decline it — if Miru seems inert, check
+  about:addons → Miru → Permissions → "Access your data for all websites".
+  Temporary add-ons loaded via about:debugging need this granted manually.
+- **`web-ext lint`:** 0 errors. Expected warnings, safe to mention to
+  reviewers: three UNSAFE_VAR_ASSIGNMENT hits (onboarding.js, overlay.js) are
+  template literals interpolating only bundled constants, URL hostnames, and
+  extension-built numeric strings — never page or user free-text; the
+  Android min-version warning doesn't apply (desktop-only).
 - **Background:** Firefox runs the background as an event page
   (`background.scripts`) instead of Chrome's service worker; same code, the
   utility files are simply loaded via the manifest instead of `importScripts`.
