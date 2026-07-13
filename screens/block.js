@@ -3,7 +3,6 @@
 (async () => {
   const p = new URLSearchParams(location.search);
   const site = p.get('site') || '';
-  const night = p.get('night') === '1';
   // target = the raw tail after "&target=" (it carries its own ? and & from the
   // blocked URL), so a peek can return to the exact page, not just the site root.
   let target = '';
@@ -28,7 +27,7 @@
   // The block is firm, but not a dead end: a chosen, time-boxed way in. The
   // worker opens a 5-minute pass for this domain in this tab, then re-blocks —
   // enough to follow a link through (a channel to a video) without it becoming
-  // an open-ended stay. Only offered for a site block, never during night.
+  // an open-ended stay.
   function currentTabId() {
     return new Promise((resolve) => {
       try { chrome.tabs.getCurrent((t) => resolve(t && t.id)); } catch (e) { resolve(undefined); }
@@ -51,7 +50,7 @@
 
   // Only offer the peek if the site allows it and today's ration isn't spent.
   let peeksLeft = 0, peekLimit = 0;
-  if (site && !night) {
+  if (site) {
     try {
       const res = await chrome.runtime.sendMessage({ type: 'MIRU_PEEK_LEFT' });
       peeksLeft = (res && res.remaining) || 0;
@@ -62,7 +61,6 @@
   MiruOverlay.renderBlock(document.body, {
     theme: resolved,
     domain: site,
-    night,
     onBack: () => { if (history.length > 1) history.back(); else closeSelf(); },
     onPeek: peeksLeft > 0 ? peek : null,
     peekNote: peeksLeft > 0 ? (peeksLeft + ' of ' + peekLimit + ' left today') : ''

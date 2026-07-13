@@ -8,8 +8,12 @@ document.addEventListener('DOMContentLoaded', init);
 
 function init() {
   const openOptions = () => chrome.runtime.openOptionsPage();
+  const openJournal = () =>
+    chrome.tabs.create({ url: chrome.runtime.getURL('screens/journal.html') }).catch(() => {});
   document.getElementById('open-options').addEventListener('click', openOptions);
   document.getElementById('open-options-2').addEventListener('click', openOptions);
+  document.getElementById('open-journal').addEventListener('click', openJournal);
+  document.getElementById('intention').addEventListener('click', openJournal);
   document.getElementById('begin-breath').addEventListener('click', beginBreath);
   bindFocus();
   renderIntention();

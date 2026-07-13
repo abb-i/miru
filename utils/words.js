@@ -29,10 +29,6 @@ const WORDS = {
     'Harvesting focus.', 'Completing the season.', 'Session finished.',
     'Returning to open air.', 'The field rests.', 'Well tended.'
   ],
-  night: [
-    'Tending the night.', 'The day has set.', 'Resting until morning.',
-    'Let it wait for light.', 'Night holds its own quiet.'
-  ],
   timeMirror: [
     'Still here.', 'Time pools quietly.', 'The water is deep here.',
     'A long visit.', 'Look up for a moment.', 'Notice the hour.',

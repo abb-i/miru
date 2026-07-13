@@ -32,33 +32,42 @@
         { id: 'homeFeed', critical: true, path: /^\/$/,
           selectors: ['ytd-browse[page-subtype="home"] ytd-rich-grid-renderer'] },
         // Shelves are legitimately absent on many pages — never diagnosed.
-        // grid-shelf-view-model is the newer Polymer-less shelf element.
+        // grid-shelf-view-model is the newer Polymer-less shelf element; it
+        // appears on browse surfaces AND search results, so instead of a page
+        // scope it's keyed on containing /shorts links — non-Shorts shelves
+        // (courses, playlists) never match.
         { id: 'shortsShelves',
           selectors: ['ytd-reel-shelf-renderer',
                       'ytd-rich-shelf-renderer[is-shorts]',
-                      'ytd-browse grid-shelf-view-model'] },
+                      'grid-shelf-view-model:has(a[href^="/shorts"])'] },
+        // Search results: individual Shorts slip in as ordinary video results
+        // — href-keyed like shortsNav, so it survives every locale.
+        { id: 'shortsSearch',
+          selectors: ['ytd-search ytd-video-renderer:has(a[href^="/shorts"])',
+                      'ytd-search yt-lockup-view-model:has(a[href^="/shorts"])'] },
         // href-keyed instead of title text, so it survives every locale.
         // A direct /shorts/… link still plays — the pack removes the pull
         // toward Shorts, not a deliberately followed link.
         { id: 'shortsNav',
           selectors: ['ytd-guide-entry-renderer:has(a[href^="/shorts"])',
-                      'ytd-mini-guide-entry-renderer:has(a[href^="/shorts"])'] },
-        // The whole related/recommendation column; player + comments intact.
-        { id: 'related', critical: true, path: /^\/watch/,
-          selectors: ['ytd-watch-next-secondary-results-renderer'] }
+                      'ytd-mini-guide-entry-renderer:has(a[href^="/shorts"])'] }
+        // The related column on /watch stays: calm rests only the feed and
+        // Shorts — the video you came for keeps its surroundings.
       ]
     },
     'instagram.com': {
       matches: ['*://instagram.com/*', '*://www.instagram.com/*'],
-      note: { text: 'The feed is resting. Messages, search and profiles still work.',
+      note: { text: 'The feed is resting. Stories, messages and search still work.',
               paths: [/^\/$/, /^\/explore/, /^\/reels/] },
       // Instagram's class names are obfuscated and churn constantly, so the
-      // pack hides whole route surfaces instead: the runtime mirrors
+      // pack keys off routes and roles instead: the runtime mirrors
       // location.pathname onto html[data-miru-path] and the CSS keys off it.
       // /direct/ (messages), profiles, and search never match — untouched.
       hooks: [
+        // Only the endless post feed rests on home — each post is an
+        // <article>. The stories row above it stays visible and usable.
         { id: 'homeFeed', critical: true, path: /^\/$/,
-          selectors: ['html[data-miru-path="/"] main[role="main"]'] },
+          selectors: ['html[data-miru-path="/"] main[role="main"] article'] },
         { id: 'explore', critical: true, path: /^\/explore/,
           selectors: ['html[data-miru-path^="/explore"] main[role="main"]'] },
         { id: 'reels', critical: true, path: /^\/reels/,
@@ -119,6 +128,9 @@
   })(buildCSS(pack));
 
   // ---- Path mirror: SPA navigations toggle the route-scoped rules -----------
+  // noteEl must be initialized before the first mirrorPath() below — it calls
+  // updateNote(), and a later `let` would still be in its temporal dead zone.
+  let noteEl = null;
   let lastPath = null;
   function mirrorPath() {
     if (location.pathname === lastPath) return;
@@ -135,15 +147,29 @@
   setInterval(mirrorPath, 1000); // light fallback; no-ops while the path holds
 
   // ---- The note: one quiet line where a whole surface rests -----------------
-  let noteEl = null;
   function ensureNote() {
     if (noteEl || !document.body) return;
+    // Built with DOM APIs, not innerHTML: Instagram enforces Trusted Types
+    // (require-trusted-types-for 'script'), where an innerHTML sink throws.
     noteEl = document.createElement('div');
     noteEl.className = 'miru-calm-note';
-    noteEl.innerHTML = `<svg viewBox="0 0 48 56" width="15" height="17" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48"
-        stroke="#2da96e" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.9"/></svg><span></span>`;
-    noteEl.querySelector('span').textContent = pack.note.text;
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 48 56');
+    svg.setAttribute('width', '15');
+    svg.setAttribute('height', '17');
+    svg.setAttribute('fill', 'none');
+    const path = document.createElementNS(SVG_NS, 'path');
+    path.setAttribute('d', 'M24 28 C24 28 24 20 28 16 C32 12 36 14 36 20 C36 28 30 36 22 40 C14 44 10 40 12 34 C14 26 20 18 28 14 C36 10 42 14 42 22 C42 32 36 42 26 48');
+    path.setAttribute('stroke', '#2da96e');
+    path.setAttribute('stroke-width', '2.4');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('opacity', '0.9');
+    svg.appendChild(path);
+    const span = document.createElement('span');
+    span.textContent = pack.note.text;
+    noteEl.append(svg, span);
     document.body.appendChild(noteEl);
     updateNote();
   }

@@ -1,0 +1,7 @@
+/* Miru — night rest: the web loses its color until morning.
+   Injected via scripting.insertCSS while the night window holds;
+   the slow transition lets a page fade rather than snap to gray. */
+html {
+  filter: grayscale(1) !important;
+  transition: filter 12s ease !important;
+}

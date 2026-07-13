@@ -96,13 +96,13 @@
 .miru-arrive{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:36px;color:var(--text);}
 .miru-q{font-size:13px;color:var(--muted);max-width:340px;}
 .miru-q b{font-weight:400;color:var(--text);}
-.miru-intent{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:22px;color:var(--text);
+.miru-intent{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:22px;color:var(--text);
   background:none;border:none;border-bottom:.5px solid var(--border);outline:none;text-align:center;
   padding:6px 10px;width:min(300px,80vw);transition:border-color .3s ease;}
 .miru-intent:focus{border-color:var(--green);}
 .miru-intent::placeholder{color:var(--muted);opacity:.55;}
 .miru-actions{display:flex;gap:1rem;align-items:center;margin-top:.6rem;flex-wrap:wrap;justify-content:center;}
-.miru-continue{font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:300;font-size:18px;color:#f7f5ef;
+.miru-continue{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:19px;color:#f7f5ef;
   background:var(--green);border:none;border-radius:8px;padding:11px 28px;cursor:pointer;transition:background .2s ease;}
 .miru-continue:hover{background:var(--green-dark);}
 .miru-ghost{font-size:13px;color:var(--muted);background:none;border:.5px solid var(--border);border-radius:20px;
@@ -324,7 +324,7 @@
         ${opts.onPeek && opts.peekNote ? `<div class="miru-peek-note">${opts.peekNote}</div>` : ''}
       </div>`;
     root.appendChild(o);
-    o.querySelector('.miru-not').textContent = word(opts.night ? 'night' : 'blocker') || 'Not today.';
+    o.querySelector('.miru-not').textContent = word('blocker') || 'Not today.';
 
     // The spiral draws itself in once — a held breath, not an alarm.
     const p = o.querySelector('.miru-spiral-lg path');
