@@ -1,6 +1,7 @@
-# Chrome Web Store — submission notes for Miru v2.0.0
+# Store submission notes for Miru v2.1.0 — Chrome Web Store & Firefox Add-ons (AMO)
 
-Everything the dashboard will ask for, ready to paste.
+Everything the dashboards will ask for, ready to paste. The Chrome sections
+apply to AMO too unless the AMO section below says otherwise.
 
 ## Single purpose description
 
@@ -64,6 +65,7 @@ computer, so prompts don't pile up.
 - Remote code: **No** (all scripts, styles, and fonts are bundled).
 - Privacy policy URL: `https://github.com/abb-i/miru/blob/main/PRIVACY.md`
   (bilingual DE/EN, German authoritative).
+- License: open source under **GPL-3.0** (`LICENSE` at the repo root).
 
 ## German legal requirements (Impressumspflicht)
 
@@ -96,6 +98,29 @@ Reels/recommendation elements with CSS — it reads nothing from the page. The
 offers a rationed escape hatch ("stay five minutes", at most three per day)
 implemented as a temporary session DNR allow rule scoped to that tab and
 domain; on calm-pack sites the stay lands in the calmed version.
+
+## Firefox Add-ons (AMO) — what differs from the Chrome submission
+
+- **Package:** `dist/miru-firefox-v2.1.0.zip` (built from the `firefox/`
+  folder; only its `manifest.json` differs from Chrome's).
+- **Add-on ID:** `miru@abb-i.github.io` (`browser_specific_settings.gecko.id`
+  in the Firefox manifest — required for `storage.sync` and stable updates).
+- **Minimum Firefox version:** 128.0 (ESR; covers every declarativeNetRequest
+  feature Miru uses).
+- **Background:** Firefox runs the background as an event page
+  (`background.scripts`) instead of Chrome's service worker; same code, the
+  utility files are simply loaded via the manifest instead of `importScripts`.
+- **Source code:** no source-code upload needed — the package *is* the source
+  (no build step, no minification). Reviewer link: `https://github.com/abb-i/miru`.
+- **Data collection questions:** answer **No** throughout — no data collected,
+  transmitted, or shared (same facts as the Chrome privacy tab above).
+- **Listing copy:** reuse the short description and reviewer notes below;
+  replace "Chrome" with "Firefox" where the text names the browser. In the
+  privacy sentence, note that settings sync (if enabled) goes through Firefox
+  Sync rather than Chrome sync.
+- **Impressum:** the German Impressumspflicht applies to the AMO listing page
+  as well — end the AMO description with the same line:
+  `Impressum / Legal notice: https://github.com/abb-i/miru/blob/main/IMPRESSUM.md`
 
 ## Assets still needed (cannot be generated from code)
 

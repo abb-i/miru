@@ -1,6 +1,6 @@
 # Datenschutzerklärung für die Browser-Erweiterung „Miru"
 
-_Stand: 9. Juli 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
+_Stand: 13. Juli 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
 
 ## 1. Verantwortlicher
 
@@ -61,7 +61,7 @@ Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO
 vorliegt, ist Rechtsgrundlage Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der
 von Ihnen gewünschten Funktionen).
 
-## 4. Synchronisierung durch Ihren Browser (Google)
+## 4. Synchronisierung durch Ihren Browser (Google bzw. Mozilla)
 
 Ihre Einstellungen werden über die Browser-Schnittstelle `chrome.storage.sync`
 gespeichert. Sind Sie in Chrome mit einem Google-Konto angemeldet und haben die
@@ -70,16 +70,20 @@ Chrome-Synchronisierung aktiviert, gleicht **Ihr Browser** diese Einstellungen
 Funktion Ihres Browsers und erfolgt durch Google (Google Ireland Limited,
 Gordon House, Barrow Street, Dublin 4, Irland) auf Grundlage Ihrer Vereinbarung
 mit Google; es gilt die Datenschutzerklärung von Google
-(https://policies.google.com/privacy). Der Entwickler hat hierauf weder Zugriff
-noch Einfluss. Ohne aktivierte Chrome-Synchronisierung verbleiben die
-Einstellungen ausschließlich auf Ihrem Gerät.
+(https://policies.google.com/privacy). Nutzen Sie Miru in Firefox, gilt
+Entsprechendes für die Firefox-Synchronisierung durch Mozilla (Mozilla
+Corporation; https://www.mozilla.org/privacy/), sofern Sie diese aktiviert
+haben. Der Entwickler hat hierauf weder Zugriff noch Einfluss. Ohne aktivierte
+Browser-Synchronisierung verbleiben die Einstellungen ausschließlich auf Ihrem
+Gerät.
 
-## 5. Chrome Web Store
+## 5. Chrome Web Store und Firefox Add-ons
 
 Installation und Updates der Erweiterung erfolgen über den Chrome Web Store von
-Google. Dabei verarbeitet Google Daten (z. B. IP-Adresse, Kontodaten) in
-eigener datenschutzrechtlicher Verantwortung; es gilt die Datenschutzerklärung
-von Google.
+Google bzw. — für die Firefox-Version mit identischen Datenpraktiken — über
+addons.mozilla.org von Mozilla. Dabei verarbeitet der jeweilige Anbieter Daten
+(z. B. IP-Adresse, Kontodaten) in eigener datenschutzrechtlicher Verantwortung;
+es gilt die Datenschutzerklärung von Google bzw. Mozilla.
 
 ## 6. Spenden (Ko-fi)
 
@@ -155,14 +159,14 @@ DSGVO) findet nicht statt.
 
 Diese Datenschutzerklärung wird angepasst, wenn sich die Erweiterung oder die
 Rechtslage ändert. Die jeweils aktuelle Fassung ist in den Einstellungen der
-Erweiterung (Bereich „Legal") und unter der im Chrome Web Store angegebenen
-Adresse abrufbar.
+Erweiterung (Bereich „Legal") und unter der im jeweiligen Store (Chrome Web
+Store bzw. addons.mozilla.org) angegebenen Adresse abrufbar.
 
 ---
 
 # Privacy Policy for the "Miru" browser extension (English translation)
 
-_Last updated: July 9, 2026. The German version above is the legally
+_Last updated: July 13, 2026. The German version above is the legally
 authoritative one._
 
 ## 1. Controller
@@ -208,22 +212,25 @@ storage (`chrome.storage`):
 Where this constitutes processing of personal data under the GDPR, the legal
 basis is Art. 6(1)(b) GDPR (providing the features you requested).
 
-## 4. Synchronization by your browser (Google)
+## 4. Synchronization by your browser (Google or Mozilla)
 
 Settings are stored via the browser API `chrome.storage.sync`. If you are
 signed into Chrome and have Chrome sync enabled, **your browser** synchronizes
 these settings between your devices via Google's servers. This is a browser
 feature performed by Google (Google Ireland Limited, Gordon House, Barrow
 Street, Dublin 4, Ireland) under your agreement with Google and Google's
-privacy policy (https://policies.google.com/privacy). The developer has no
-access to and no influence over this. Without Chrome sync, settings never
-leave your device.
+privacy policy (https://policies.google.com/privacy). If you use Miru in
+Firefox, the same applies to Firefox Sync, performed by Mozilla (Mozilla
+Corporation; https://www.mozilla.org/privacy/), if you have enabled it. The
+developer has no access to and no influence over this. Without browser sync,
+settings never leave your device.
 
-## 5. Chrome Web Store
+## 5. Chrome Web Store and Firefox Add-ons
 
-Installation and updates happen through Google's Chrome Web Store, where
-Google processes data (e.g. IP address, account data) under its own
-responsibility and privacy policy.
+Installation and updates happen through Google's Chrome Web Store — or, for
+the Firefox version with identical data practices, through Mozilla's
+addons.mozilla.org — where the respective provider processes data (e.g. IP
+address, account data) under its own responsibility and privacy policy.
 
 ## 6. Donations (Ko-fi)
 
@@ -286,4 +293,5 @@ No automated decision-making, including profiling (Art. 22 GDPR), takes place.
 
 This policy will be updated if the extension or the legal situation changes.
 The current version is always available in the extension's settings ("Legal"
-section) and at the address given in the Chrome Web Store.
+section) and at the address given in the respective store (Chrome Web Store or
+addons.mozilla.org).
