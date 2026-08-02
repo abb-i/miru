@@ -8,7 +8,7 @@ Arnoldsweilerstraße 52
 Deutschland
 
 **Kontakt**
-E-Mail: akadirdogan2727@gmail.com
+E-Mail: me@abdulkadirdogan.com
 
 **Verantwortlich im Sinne des § 18 Abs. 2 MStV**
 Abdulkadir Dogan (Anschrift wie oben)
@@ -38,7 +38,7 @@ Arnoldsweilerstraße 52
 Germany
 
 **Contact**
-Email: akadirdogan2727@gmail.com
+Email: me@abdulkadirdogan.com
 
 **Responsible for content pursuant to Section 18 (2) MStV**
 Abdulkadir Dogan (address as above)

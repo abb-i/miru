@@ -23,36 +23,45 @@
   const CALM_PACKS = {
     'youtube.com': {
       matches: ['*://youtube.com/*', '*://www.youtube.com/*'],
-      // The note appears only where a whole surface rests (home), not on
-      // watch pages where hiding the related column should just feel calm.
-      note: { text: 'The feed is resting. Search still works.', paths: [/^\/$/] },
+      // Calm YouTube becomes text. Search and the video you came for keep
+      // working, but the visual pull rests: no thumbnails, no recommendations,
+      // no comments. Uniform removal instead of surgical page-subtype scoping,
+      // so a YouTube redesign is far less likely to break it. The note shows on
+      // home, where a whole surface rests.
+      note: { text: 'Quieted — search and the video still work.', paths: [/^\/$/] },
       hooks: [
-        // page-subtype scoping is essential: ytd-rich-grid-renderer also
-        // renders a channel's Videos tab, which must stay usable.
+        // Home is pure recommendation — rest the whole grid, not just its
+        // thumbnails. Path-scoped and critical so its breakage is caught.
         { id: 'homeFeed', critical: true, path: /^\/$/,
           selectors: ['ytd-browse[page-subtype="home"] ytd-rich-grid-renderer'] },
-        // Shelves are legitimately absent on many pages — never diagnosed.
-        // grid-shelf-view-model is the newer Polymer-less shelf element; it
-        // appears on browse surfaces AND search results, so instead of a page
-        // scope it's keyed on containing /shorts links — non-Shorts shelves
-        // (courses, playlists) never match.
+        // Thumbnails, everywhere: the visual hook. Titles and text stay, so
+        // search results and channels remain usable — just without the imagery.
+        // Both worlds: ytd-thumbnail (Polymer) and yt-thumbnail-view-model (new).
+        { id: 'thumbnails',
+          selectors: ['ytd-thumbnail',
+                      'ytd-playlist-thumbnail',
+                      'yt-thumbnail-view-model'] },
+        // Recommendations beside the video — the "up next" / related column.
+        { id: 'related',
+          selectors: ['#related',
+                      'ytd-watch-next-secondary-results-renderer'] },
+        // Comments.
+        { id: 'comments',
+          selectors: ['ytd-comments#comments'] },
+        // The player's own pulls: end-screen cards and the autoplay "up next"
+        // overlay that appears as a video finishes.
+        { id: 'endscreen',
+          selectors: ['.ytp-endscreen-content',
+                      '.ytp-ce-element',
+                      '.ytp-autonav-endscreen-upnext-container'] },
+        // Shorts shelves with a stable element name — hidden cheaply in CSS at
+        // document_start (no flash). Every other Shorts surface (generic
+        // shelves, search results, the sidebar entry) is hidden in JS by
+        // hideShorts() below: the CSS :has() that used to catch them forced
+        // costly style recalc on YouTube's constantly-mutating watch page.
         { id: 'shortsShelves',
           selectors: ['ytd-reel-shelf-renderer',
-                      'ytd-rich-shelf-renderer[is-shorts]',
-                      'grid-shelf-view-model:has(a[href^="/shorts"])'] },
-        // Search results: individual Shorts slip in as ordinary video results
-        // — href-keyed like shortsNav, so it survives every locale.
-        { id: 'shortsSearch',
-          selectors: ['ytd-search ytd-video-renderer:has(a[href^="/shorts"])',
-                      'ytd-search yt-lockup-view-model:has(a[href^="/shorts"])'] },
-        // href-keyed instead of title text, so it survives every locale.
-        // A direct /shorts/… link still plays — the pack removes the pull
-        // toward Shorts, not a deliberately followed link.
-        { id: 'shortsNav',
-          selectors: ['ytd-guide-entry-renderer:has(a[href^="/shorts"])',
-                      'ytd-mini-guide-entry-renderer:has(a[href^="/shorts"])'] }
-        // The related column on /watch stays: calm rests only the feed and
-        // Shorts — the video you came for keeps its surroundings.
+                      'ytd-rich-shelf-renderer[is-shorts]'] }
       ]
     },
     'instagram.com': {
@@ -127,16 +136,42 @@
     document.documentElement.appendChild(s);
   })(buildCSS(pack));
 
+  // ---- Shorts: hidden in JS (YouTube only) ----------------------------------
+  // Not CSS :has(): matching :has(a[href^="/shorts"]) against YouTube's
+  // constantly-mutating DOM forced heavy style recalc and slowed watch pages.
+  // A periodic querySelectorAll keyed off the /shorts href is far cheaper and
+  // just as locale-proof. A followed /shorts link still plays — this removes
+  // the pull toward Shorts, not the destination.
+  const SHORTS_HOSTS = 'ytd-reel-shelf-renderer,ytd-rich-shelf-renderer,' +
+    'grid-shelf-view-model,ytd-video-renderer,yt-lockup-view-model,' +
+    'ytd-guide-entry-renderer,ytd-mini-guide-entry-renderer';
+  // Matches a Shorts link whether its href is relative (/shorts/…) or absolute
+  // (https://www.youtube.com/shorts/…) — the sidebar/menu entry can be either.
+  const SHORTS_LINK = 'a[href^="/shorts"],a[href*="//www.youtube.com/shorts"],' +
+    'a[href*="//m.youtube.com/shorts"]';
+  function hideShorts() {
+    if (domainKey !== 'youtube.com') return;
+    for (const a of document.querySelectorAll(SHORTS_LINK)) {
+      const host = a.closest(SHORTS_HOSTS);
+      if (host) host.style.setProperty('display', 'none', 'important');
+    }
+  }
+  hideShorts();
+  if (domainKey === 'youtube.com') setInterval(hideShorts, 1500);
+
   // ---- Path mirror: SPA navigations toggle the route-scoped rules -----------
-  // noteEl must be initialized before the first mirrorPath() below — it calls
-  // updateNote(), and a later `let` would still be in its temporal dead zone.
+  // noteEl and healthTimer must be initialized before the first mirrorPath()
+  // below — it calls updateNote() and scheduleHealth(), so a later `let` would
+  // leave either in its temporal dead zone and throw.
   let noteEl = null;
   let lastPath = null;
+  let healthTimer = null;
   function mirrorPath() {
     if (location.pathname === lastPath) return;
     lastPath = location.pathname;
     document.documentElement.setAttribute('data-miru-path', location.pathname);
     updateNote();
+    hideShorts();          // catch Shorts on the freshly entered route
     scheduleHealth(3000); // the new route needs a beat to render before judging
   }
   mirrorPath();
@@ -185,7 +220,6 @@
   // — breakage becomes a visible prompt instead of a silently returned feed.
   // Only critical, path-scoped hooks are judged: Shorts shelves may be
   // legitimately absent, and off-route hooks prove nothing.
-  let healthTimer = null;
   function scheduleHealth(delay) {
     clearTimeout(healthTimer);
     healthTimer = setTimeout(checkHealth, delay);

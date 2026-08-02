@@ -1,6 +1,6 @@
 # Datenschutzerklärung für die Browser-Erweiterung „Miru"
 
-_Stand: 13. Juli 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
+_Stand: 2. August 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
 
 ## 1. Verantwortlicher
 
@@ -10,7 +10,7 @@ Abdulkadir Dogan
 Arnoldsweilerstraße 52
 52351 Düren
 Deutschland
-E-Mail: akadirdogan2727@gmail.com
+E-Mail: me@abdulkadirdogan.com
 
 ## 2. Der Grundsatz: keine Datenerhebung
 
@@ -117,10 +117,11 @@ Funktionserbringung an:
   Ihren Einstellungen. Seiteninhalte werden dabei nicht gelesen.
 - **scripting**: Einblenden der erweiterungseigenen Atem-Übung als
   vorübergehende Überlagerung direkt auf der gerade geöffneten Seite (statt in
-  einem eigenen Fenster), Ausblenden ablenkender Feed-Elemente
-  (Feeds, Shorts, Reels, Explore) durch mitgelieferte Stylesheets auf
-  den Websites, die Sie auf „Beruhigen" gestellt haben (derzeit YouTube und
-  Instagram), sowie Anwenden eines mitgelieferten Graustufen-Stylesheets
+  einem eigenen Fenster), Ausblenden ablenkender Elemente — bei YouTube
+  Vorschaubilder, Empfehlungen, Kommentare und Shorts; bei Instagram Feed,
+  Reels und Explore — durch mitgelieferte Stylesheets und ein kleines Skript
+  auf den Websites, die Sie auf „Beruhigen" gestellt haben (derzeit YouTube
+  und Instagram), sowie Anwenden eines mitgelieferten Graustufen-Stylesheets
   während Ihrer Nachtstunden und kurzzeitig vor einer Atem-Erinnerung. Es wird
   ausschließlich mitgelieferter Code der Erweiterung ausgeführt;
   Seiteninhalte werden weder gelesen noch ausgewertet noch übermittelt.
@@ -166,7 +167,7 @@ Store bzw. addons.mozilla.org) angegebenen Adresse abrufbar.
 
 # Privacy Policy for the "Miru" browser extension (English translation)
 
-_Last updated: July 13, 2026. The German version above is the legally
+_Last updated: August 2, 2026. The German version above is the legally
 authoritative one._
 
 ## 1. Controller
@@ -177,7 +178,7 @@ Controller within the meaning of the EU General Data Protection Regulation
 Abdulkadir Dogan
 Arnoldsweilerstraße 52
 52351 Düren, Germany
-Email: akadirdogan2727@gmail.com
+Email: me@abdulkadirdogan.com
 
 ## 2. The principle: no data collection
 
@@ -259,9 +260,10 @@ Miru requests browser permissions solely to work locally:
 its own breath/block pages per your settings; page content is never
 read), **scripting** (drawing the extension's own breathing exercise as a
 temporary overlay on the page you're viewing instead of opening a separate
-window, hiding distracting feed elements — feeds, Shorts, Reels, Explore —
-with bundled stylesheets on the sites you set to "calm", currently YouTube
-and Instagram, and applying a bundled grayscale stylesheet during your night
+window, hiding distracting elements — on YouTube thumbnails, recommendations,
+comments and Shorts; on Instagram the feed, Reels and Explore — with bundled
+stylesheets and a small script on the sites you set to "calm" (currently
+YouTube and Instagram), and applying a bundled grayscale stylesheet during your night
 hours and briefly before a periodic breath; only bundled extension code runs,
 and page content is never read, evaluated, or transmitted), **tabs** (active site for
 the time display, redirecting already-open blocked tabs), **storage**

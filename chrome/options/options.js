@@ -168,7 +168,7 @@ function bindControls() {
 
   // Feedback: opens the user's own mail app with the message prefilled —
   // Miru itself sends nothing over the network.
-  const FEEDBACK_EMAIL = 'akadirdogan2727@gmail.com';
+  const FEEDBACK_EMAIL = 'me@abdulkadirdogan.com';
   document.getElementById('feedback-send').addEventListener('click', () => {
     const text = document.getElementById('feedback-text').value.trim();
     const version = chrome.runtime.getManifest().version;

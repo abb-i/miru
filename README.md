@@ -15,10 +15,11 @@ work.
 
 - **Breathe** — before you land there, an unfurling fern guides one calm
   breath. Then you choose: continue, or go back.
-- **Calm** — the breath, and a quieter room behind it. On YouTube and
-  Instagram the algorithmic pull rests — home feed, Shorts, Reels, Explore,
-  the recommendation column — while search, messages, profiles, and the video
-  you came for keep working. On sites without a calm pack, calm simply
+- **Calm** — the breath, and a quieter room behind it. On YouTube, calm
+  strips the page back to text: no thumbnails, no recommendations, no
+  comments, no Shorts — while search and the video you came for keep working.
+  On Instagram the feed, Reels and Explore rest while Stories, messages,
+  search and profiles keep working. On sites without a calm pack, calm simply
   breathes.
 - **Block** — a calm page, not a scolding one — and not a dead end: up to
   three times a day you can choose to stay five minutes, landing in the calm
@@ -50,10 +51,10 @@ This repository is public so you don't have to take our word for it:
 - The breathing overlay is drawn by the extension's own bundled script
   (`utils/overlay.js`); it reads nothing from the page it appears on and
   removes itself when the breath ends.
-- Calm mode hides feed elements with bundled CSS (`utils/calm.js` — selectors
-  as data, one file), injected only on the sites *you* set to calm. It reads
-  no page content; its only writing is a local flag when a selector stops
-  matching, so options can say a pack has gone stale.
+- Calm mode hides distracting elements with bundled CSS and a small script
+  (`utils/calm.js` — selectors as data, one file), injected only on the sites
+  *you* set to calm. It reads no page content; its only writing is a local
+  flag when a selector stops matching, so options can say a pack has gone stale.
 
 Full details: [Privacy policy](PRIVACY.md) · [Impressum / Legal notice](IMPRESSUM.md)
 

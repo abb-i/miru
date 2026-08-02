@@ -657,22 +657,30 @@ async function armPeriodicBreath() {
 
 async function maybeDeliverBreath() {
   if (!breathDue || delivering) return;
-  if (Date.now() - lastBreathAt < 60000) return;   // just breathed — let it settle
-  let state = 'active';
-  try { state = await chrome.idle.queryState(60); } catch (e) {}
-  if (state !== 'active') return;                  // not here — keep waiting
-  const tab = await activeHostTab();
-  if (!tab) return;                                // wait for a seam we can host
+  // Take the lock before any await: maybeDeliverBreath fires on every tab
+  // switch and completed navigation, so two events could otherwise both pass
+  // the guard, both await, and the second would read due.pool after the first
+  // already delivered and cleared breathDue. finally always releases it.
   delivering = true;
-  const due = breathDue;
-  breathDue = null;
-  await chrome.storage.local.remove('breathDue').catch(() => {});
-  await clearGrayPrep();   // color returns with the breath
-  lastBreathAt = Date.now();
-  const opts = { theme: resolveTheme(), pool: due.pool, duration: due.duration,
-    pattern: settings.breathPattern, mirror: '', minutes: '' };
-  if (!(await injectBreathInto(tab.id, opts))) breathWindow(opts);
-  delivering = false;
+  try {
+    if (Date.now() - lastBreathAt < 60000) return;   // just breathed — let it settle
+    let state = 'active';
+    try { state = await chrome.idle.queryState(60); } catch (e) {}
+    if (state !== 'active') return;                  // not here — keep waiting
+    const tab = await activeHostTab();
+    if (!tab) return;                                // wait for a seam we can host
+    if (!breathDue) return;                          // delivered elsewhere while we awaited
+    const due = breathDue;
+    breathDue = null;
+    await chrome.storage.local.remove('breathDue').catch(() => {});
+    await clearGrayPrep();   // color returns with the breath
+    lastBreathAt = Date.now();
+    const opts = { theme: resolveTheme(), pool: due.pool, duration: due.duration,
+      pattern: settings.breathPattern, mirror: '', minutes: '' };
+    if (!(await injectBreathInto(tab.id, opts))) breathWindow(opts);
+  } finally {
+    delivering = false;
+  }
 }
 
 // --- Time tracking ----------------------------------------------------------
