@@ -48,10 +48,9 @@ async function loadAll() {
   document.getElementById('periodic-breath').checked = s.periodicBreathEnabled;
   selectPill('interval-pills', 'int', s.periodicBreathInterval);
 
-  // Time mirror + first light
+  // Time mirror
   document.getElementById('mirror-enabled').checked = s.timeMirrorEnabled;
   selectPill('mirror-pills', 'min', s.timeMirrorMinutes);
-  document.getElementById('firstlight-enabled').checked = s.firstLightEnabled;
 
   // Night mode
   document.getElementById('night-enabled').checked = s.nightModeEnabled;
@@ -134,15 +133,12 @@ function bindControls() {
     await saveSetting('periodicBreathInterval', Number(val)); flashSaved();
   });
 
-  // Time mirror + first light
+  // Time mirror
   document.getElementById('mirror-enabled').addEventListener('change', async (e) => {
     await saveSetting('timeMirrorEnabled', e.target.checked); flashSaved();
   });
   bindPills('mirror-pills', 'min', async (val) => {
     await saveSetting('timeMirrorMinutes', Number(val)); flashSaved();
-  });
-  document.getElementById('firstlight-enabled').addEventListener('change', async (e) => {
-    await saveSetting('firstLightEnabled', e.target.checked); flashSaved();
   });
 
   // Night mode

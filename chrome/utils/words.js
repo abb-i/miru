@@ -34,11 +34,6 @@ const WORDS = {
     'A long visit.', 'Look up for a moment.', 'Notice the hour.',
     'Roots, or ruts?', 'Surface for air.', 'The garden waits outside.',
     'How does this feel?', 'Deep in one place.', 'The light has moved.'
-  ],
-  firstLight: [
-    'First light.', 'The day opens.', 'A fresh row to plant.',
-    'Begin gently.', 'The dew is still here.', 'Morning is soil.',
-    'Today is unwritten.', 'Arrive before you browse.'
   ]
 };
 

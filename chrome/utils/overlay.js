@@ -181,10 +181,7 @@
       </div>
       <div class="miru-choice">
         <div class="miru-arrive"></div>
-        ${opts.intentionPrompt
-          ? `<div class="miru-q">One word to carry into today.</div>
-             <input class="miru-intent" maxlength="40" placeholder="e.g. clarity" spellcheck="false" autocomplete="off">`
-          : `<div class="miru-q">${domain ? `Continue to <b>${domain}</b>?` : 'Continue?'}</div>`}
+        <div class="miru-q">${domain ? `Continue to <b>${domain}</b>?` : 'Continue?'}</div>
         <div class="miru-actions">
           <button class="miru-continue">continue</button>
           <button class="miru-ghost miru-back">go back</button>
@@ -200,7 +197,6 @@
     const wordEl = o.querySelector('.miru-word');
     const breathView = o.querySelector('.miru-breath');
     const choiceView = o.querySelector('.miru-choice');
-    const intentEl = o.querySelector('.miru-intent');
     const cycleDots = o.querySelectorAll('.miru-cycles i');
 
     // The spiral starts undrawn; each inhale draws it, each exhale releases it.
@@ -274,24 +270,19 @@
           breathView.style.display = 'none';
           o.querySelector('.miru-arrive').textContent = word('focusStart') || 'Arriving.';
           choiceView.classList.add('show');
-          if (intentEl) intentEl.focus();
         }, 500);
       } else {
         dismiss(opts.onDone);
       }
     }
 
-    const intention = () => (intentEl ? intentEl.value.trim() : '');
-    o.querySelector('.miru-continue').addEventListener('click', () => dismiss(opts.onContinue, intention()));
-    o.querySelector('.miru-back').addEventListener('click', () => dismiss(opts.onBack, intention()));
-    if (intentEl) intentEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') dismiss(opts.onContinue, intention());
-    });
+    o.querySelector('.miru-continue').addEventListener('click', () => dismiss(opts.onContinue));
+    o.querySelector('.miru-back').addEventListener('click', () => dismiss(opts.onBack));
 
     // The breath itself cannot be skipped. Keys only act once it has finished.
     function onKey(e) {
       if (e.key !== 'Escape' || !ended) return;
-      dismiss(opts.askContinue ? opts.onContinue : opts.onDone, intention());
+      dismiss(opts.askContinue ? opts.onContinue : opts.onDone);
     }
     document.addEventListener('keydown', onKey, true);
 

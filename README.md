@@ -35,8 +35,6 @@ Around the postures:
   switch, a finished navigation) — not as another window cutting in.
 - **Night mode** — during your night hours the web loses its color: everything
   still works, in quiet grayscale, easing you toward rest.
-- **First light** — the first breath of the day asks for one word to carry.
-  Each word settles into a local journal, one line per day.
 
 ## Privacy — verify it yourself
 

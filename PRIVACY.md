@@ -45,17 +45,12 @@ damit das Popup Ihnen Ihren Tag anzeigen kann.
 Speicherort: `chrome.storage.local` (nur dieses Gerät).
 Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
-**c) Sitzungsdaten** — eine laufende Fokus-Sitzung, das Tageswort, eine noch
+**c) Sitzungsdaten** — eine laufende Fokus-Sitzung, eine noch
 ausstehende Atem-Erinnerung, ein Tageszähler für kurzzeitige Freigaben
 blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk,
 falls das Beruhigen einer Website nicht mehr greift (nur der Domainname).
 Speicherort: `chrome.storage.local`.
 Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.
-
-**d) Journal** — das eine Wort, das Sie beim ersten Atemzug des Tages wählen,
-angezeigt auf der lokalen Journal-Seite der Erweiterung.
-Speicherort: `chrome.storage.local` (nur dieses Gerät).
-Speicherdauer: bis zur Deinstallation.
 
 Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO
 vorliegt, ist Rechtsgrundlage Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der
@@ -201,14 +196,11 @@ storage (`chrome.storage`):
 - **Usage times** — time spent per site (domain and seconds) so the popup can
   show you your day. Stored in `chrome.storage.local` (this device only) for a
   maximum of 14 days, then deleted automatically.
-- **Session state** — a running focus session, the daily intention word, a
+- **Session state** — a running focus session, a
   pending breath reminder, a daily counter for brief unblocks of blocked
   sites ("stay five minutes"), and a technical note (domain name only) if
   calming a site no longer takes effect. Stored locally until it expires or
   is resolved.
-- **Journal** — the one word you choose at the first breath of each day,
-  shown on the extension's local journal page. Stored in
-  `chrome.storage.local` (this device only) until you uninstall.
 
 Where this constitutes processing of personal data under the GDPR, the legal
 basis is Art. 6(1)(b) GDPR (providing the features you requested).

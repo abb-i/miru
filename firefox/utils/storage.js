@@ -17,7 +17,6 @@ const DEFAULTS = {
   breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
   timeMirrorEnabled: true,           // gentle notice after a long unbroken stay
   timeMirrorMinutes: 20,             // continuous minutes on one domain
-  firstLightEnabled: true,           // slower first breath of the day + intention
   nightModeEnabled: false,
   nightModeStart: '22:00',
   nightModeEnd: '07:00',
