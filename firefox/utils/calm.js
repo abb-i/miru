@@ -146,14 +146,25 @@
     'grid-shelf-view-model,ytd-video-renderer,yt-lockup-view-model,' +
     'ytd-guide-entry-renderer,ytd-mini-guide-entry-renderer';
   // Matches a Shorts link whether its href is relative (/shorts/…) or absolute
-  // (https://www.youtube.com/shorts/…) — the sidebar/menu entry can be either.
+  // (https://www.youtube.com/shorts/…).
   const SHORTS_LINK = 'a[href^="/shorts"],a[href*="//www.youtube.com/shorts"],' +
     'a[href*="//m.youtube.com/shorts"]';
   function hideShorts() {
     if (domainKey !== 'youtube.com') return;
+    // Shelves and search results: hide the container of any /shorts link.
     for (const a of document.querySelectorAll(SHORTS_LINK)) {
       const host = a.closest(SHORTS_HOSTS);
       if (host) host.style.setProperty('display', 'none', 'important');
+    }
+    // The sidebar Shorts entry (mini and full guide) doesn't reliably expose a
+    // plain /shorts href, so match it by label instead. "Shorts" is a brand
+    // name YouTube leaves untranslated in every locale, so an exact label match
+    // is safe and catches the entry the href check misses.
+    for (const e of document.querySelectorAll('ytd-guide-entry-renderer,ytd-mini-guide-entry-renderer')) {
+      const a = e.querySelector('a');
+      const label = ((a && (a.getAttribute('title') || a.getAttribute('aria-label'))) ||
+        e.getAttribute('aria-label') || e.textContent || '').trim().toLowerCase();
+      if (label === 'shorts') e.style.setProperty('display', 'none', 'important');
     }
   }
   hideShorts();
