@@ -41,7 +41,8 @@ Speicherdauer: bis zur Änderung oder Löschung durch Sie bzw. bis zur
 Deinstallation.
 
 **b) Nutzungszeiten** — die je Website verbrachte Zeit (Domain und Sekunden),
-damit das Popup Ihnen Ihren Tag anzeigen kann.
+damit das Popup Ihnen Ihren Tag anzeigen kann und eine beruhigte Website in
+Graustufen übergeht, sobald Ihre dortige Tageszeit aufgebraucht ist.
 Speicherort: `chrome.storage.local` (nur dieses Gerät).
 Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
@@ -194,7 +195,8 @@ storage (`chrome.storage`):
   `chrome.storage.sync` (see section 4) until you change or delete them, or
   uninstall.
 - **Usage times** — time spent per site (domain and seconds) so the popup can
-  show you your day. Stored in `chrome.storage.local` (this device only) for a
+  show you your day, and so a calmed site can fade to grayscale once your daily
+  time there is spent. Stored in `chrome.storage.local` (this device only) for a
   maximum of 14 days, then deleted automatically.
 - **Session state** — a running focus session, a
   pending breath reminder, a daily counter for brief unblocks of blocked

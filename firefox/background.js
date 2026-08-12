@@ -22,7 +22,6 @@ if (typeof importScripts === 'function') {
 }
 
 const DNR = chrome.declarativeNetRequest;
-console.log('[Miru] background loaded');
 
 const RID_BREATH = 1, RID_ALLOW = 2, RID_NIGHT = 3, RID_BLOCK_BASE = 100, RID_ALLOWONCE_BASE = 5000, RID_PEEK_BASE = 1000000;
 
@@ -510,7 +509,6 @@ async function grantPeek(tabId, site) {
       runAt: 'document_start', persistAcrossSessions: false
     }]).catch(() => {});
   }
-  console.log('[Miru] peek granted', { tabId, dom, id });
   chrome.alarms.create('miru-peek-' + (hasTab ? tabId : 'shared'), { when: Date.now() + PEEK_MINUTES * 60 * 1000 });
 }
 
