@@ -231,6 +231,70 @@ function grayNightTab(tab) {
   chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['utils/gray.css'] }).catch(() => {});
 }
 
+// --- Calm budget gray (a calmed site goes gray once its daily time is spent) --
+// Once cumulative time today on a calmed domain crosses CALM_GRAY_MINUTES, that
+// domain renders grayscale for the rest of the day — surviving refreshes and new
+// tabs (re-applied on every load) — until the day rolls over and its usage
+// resets. Built on the same per-site daily usage the popup shows; the schedule
+// alarm flushes in-progress time so the budget stays current mid-visit. Its own
+// CSS string keeps it from ever fighting night gray's file.
+const CALM_GRAY_MINUTES = 15;
+const CALM_GRAY_CSS = 'html{filter:grayscale(1) !important;transition:filter 1.6s ease !important;}';
+let calmGrayTabs = new Set();
+
+// Calmed domains whose cumulative time today is at or over the budget.
+async function calmOverBudget() {
+  const calm = placeDomains('calm');
+  if (!calm.length) return new Set();
+  const { usage = {} } = await chrome.storage.local.get('usage');
+  const today = usage[todayKey()] || {};
+  return new Set(calm.filter((d) => (today[d] || 0) >= CALM_GRAY_MINUTES * 60));
+}
+
+// Reconcile every open tab: gray the calmed-and-spent ones, un-gray any we
+// grayed that no longer qualify (a new day, or a place no longer set to calm).
+async function applyCalmGray() {
+  const over = await calmOverBudget();
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
+  const live = new Set();
+  let changed = false;
+  for (const t of tabs) {
+    if (t.id == null || !/^https?:\/\//i.test(t.url || '')) continue;
+    const shouldGray = over.has(getRootDomain(t.url)) && !isCustomExcepted(t.url);
+    if (shouldGray) {
+      live.add(t.id);
+      if (!calmGrayTabs.has(t.id)) {
+        chrome.scripting.insertCSS({ target: { tabId: t.id }, css: CALM_GRAY_CSS }).catch(() => {});
+        calmGrayTabs.add(t.id); changed = true;
+      }
+    } else if (calmGrayTabs.has(t.id)) {
+      chrome.scripting.removeCSS({ target: { tabId: t.id }, css: CALM_GRAY_CSS }).catch(() => {});
+      calmGrayTabs.delete(t.id); changed = true;
+    }
+  }
+  for (const id of [...calmGrayTabs]) if (!live.has(id)) { calmGrayTabs.delete(id); changed = true; }
+  if (changed) chrome.storage.local.set({ calmGrayTabs: [...calmGrayTabs] }).catch(() => {});
+}
+
+// A single tab that just (re)loaded: gray it if its calmed domain is spent.
+// A navigation clears the injected CSS, so onUpdated drops the id first and this
+// re-applies it — which is exactly what a refresh no longer escapes.
+async function maybeCalmGrayTab(tab) {
+  if (!tab || tab.id == null || !/^https?:\/\//i.test(tab.url || '')) return;
+  if (isCustomExcepted(tab.url)) return;
+  const dom = getRootDomain(tab.url);
+  if (!placeDomains('calm').includes(dom)) return;
+  const { usage = {} } = await chrome.storage.local.get('usage');
+  if (((usage[todayKey()] || {})[dom] || 0) >= CALM_GRAY_MINUTES * 60) {
+    chrome.scripting.insertCSS({ target: { tabId: tab.id }, css: CALM_GRAY_CSS }).catch(() => {});
+    if (!calmGrayTabs.has(tab.id)) {
+      calmGrayTabs.add(tab.id);
+      chrome.storage.local.set({ calmGrayTabs: [...calmGrayTabs] }).catch(() => {});
+    }
+  }
+}
+
 // --- Gray prep (one minute before each periodic breath) ----------------------
 // The page fades to grayscale over the minute before the breath is armed, so
 // the pause is prepared for rather than sprung. Color returns the moment the
@@ -292,6 +356,10 @@ async function init() {
   grayPrepTabs = new Set(stale);
   await clearGrayPrep();
   await applyNightGray();
+  // Restore which tabs we've grayed for spent calm budgets, then reconcile.
+  const { calmGrayTabs: calmStale = [] } = await chrome.storage.local.get('calmGrayTabs');
+  calmGrayTabs = new Set(calmStale);
+  await applyCalmGray();
   applyPeriodicBreath();
   chrome.alarms.create('miru-schedule', { periodInMinutes: 1 });
   try { chrome.idle.setDetectionInterval(60); } catch (e) {}
@@ -365,7 +433,7 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     await rebuildRules();
     await applyAllowRule();
     await applyNightGray();
-    if (c.places) await registerCalmScripts();
+    if (c.places) { await registerCalmScripts(); await applyCalmGray(); }
     // Only restart the periodic-breath timer when its own settings change, so
     // editing unrelated settings doesn't reset the interval.
     if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
@@ -476,6 +544,10 @@ chrome.tabs.onUpdated.addListener((id, info, tab) => {
   if (nightGrayOn && info.status === 'complete') grayNightTab(tab);
   // A navigation cleared any prep CSS with the page it was injected into.
   if (info.url && grayPrepTabs.delete(id)) chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] }).catch(() => {});
+  // Budget gray: a navigation clears the injected CSS (drop the id), then a
+  // finished load re-applies it if the calmed domain's daily time is spent.
+  if (info.url) calmGrayTabs.delete(id);
+  if (info.status === 'complete') maybeCalmGrayTab(tab);
   // A finished navigation on the active tab is a natural seam for an armed breath.
   if (breathDue && info.status === 'complete' && tab && tab.active) maybeDeliverBreath();
 });
@@ -483,6 +555,7 @@ chrome.tabs.onRemoved.addListener((id) => {
   DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   endPeek(id);
   if (grayPrepTabs.delete(id)) chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] }).catch(() => {});
+  calmGrayTabs.delete(id);
   scheduleAllow();
 });
 chrome.tabs.onCreated.addListener(() => scheduleAllow());
@@ -527,8 +600,10 @@ chrome.alarms.onAlarm.addListener(async (a) => {
       await chrome.scripting.unregisterContentScripts({ ids: [CALM_ID + '-peek-shared'] }).catch(() => {});
     } else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
+    await recordElapsed();  // flush in-progress time so calm budgets are current
     await checkTimeMirror();
     await applyNightGray(); // re-evaluate the night window
+    await applyCalmGray();  // gray any calmed site whose daily time is now spent
   }
 });
 

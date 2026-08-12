@@ -117,7 +117,7 @@ Funktionserbringung an:
   Reels und Explore — durch mitgelieferte Stylesheets und ein kleines Skript
   auf den Websites, die Sie auf „Beruhigen" gestellt haben (derzeit YouTube
   und Instagram), sowie Anwenden eines mitgelieferten Graustufen-Stylesheets
-  während Ihrer Nachtstunden und kurzzeitig vor einer Atem-Erinnerung. Es wird
+  während Ihrer Nachtstunden, kurzzeitig vor einer Atem-Erinnerung sowie auf einer beruhigten Website, sobald Ihre dortige Tageszeit aufgebraucht ist. Es wird
   ausschließlich mitgelieferter Code der Erweiterung ausgeführt;
   Seiteninhalte werden weder gelesen noch ausgewertet noch übermittelt.
 - **tabs**: Erkennen der aktiven Website (Zeitanzeige), Umleiten bereits
@@ -256,7 +256,8 @@ window, hiding distracting elements — on YouTube thumbnails, recommendations,
 comments and Shorts; on Instagram the feed, Reels and Explore — with bundled
 stylesheets and a small script on the sites you set to "calm" (currently
 YouTube and Instagram), and applying a bundled grayscale stylesheet during your night
-hours and briefly before a periodic breath; only bundled extension code runs,
+hours, briefly before a periodic breath, and to a calmed site once you've spent
+your daily time there; only bundled extension code runs,
 and page content is never read, evaluated, or transmitted), **tabs** (active site for
 the time display, redirecting already-open blocked tabs), **storage**
 (section 3), **alarms** (timed features, including ending a brief unblock),

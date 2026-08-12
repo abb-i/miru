@@ -19,8 +19,9 @@ work.
   strips the page back to text: no thumbnails, no recommendations, no
   comments, no Shorts — while search and the video you came for keep working.
   On Instagram the feed, Reels and Explore rest while Stories, messages,
-  search and profiles keep working. On sites without a calm pack, calm simply
-  breathes.
+  search and profiles keep working. Spend 15 minutes on a calmed site in a
+  day and it fades to grayscale for the rest of it. On sites without a calm
+  pack, calm simply breathes.
 - **Block** — a calm page, not a scolding one — and not a dead end: up to
   three times a day you can choose to stay five minutes, landing in the calm
   room where one exists, and the block returns when time is up.
