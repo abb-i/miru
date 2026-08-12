@@ -7,10 +7,11 @@
 # Release packages — attach zips to GitHub Releases instead
 dist/
 
-# Personal working notes
+# Personal working notes & internal store-submission notes
 LAUNCH_CHECKLIST.md
 LAUNCH_PLAN.md
 LAUNCH_WRITING_GUIDE.md
+STORE_LISTING.md
 
 # Store screenshots & promo tiles (working assets, uploaded to the dashboards)
 screenshot_test/
