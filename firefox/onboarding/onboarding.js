@@ -9,7 +9,7 @@
     placesAction: 'breathe', // the posture the chosen places get: breathe | calm | block
     chosen: new Set(),
     breath: 10,          // seconds → rounded to whole cycles by the overlay
-    periodic: 15,        // minutes, 0 = off
+    periodic: 30,        // minutes, 0 = off (30 minimum; 60 also offered)
     night: false,
     pattern: 'settle',
     theme: 'dark'
@@ -17,10 +17,10 @@
 
   // How the first answer shapes the suggestions that follow.
   const PRESETS = {
-    scroll:   { breath: 10, periodic: 15, night: false },
-    deep:     { breath: 25, periodic: 30, night: false },
+    scroll:   { breath: 10, periodic: 30, night: false },
+    deep:     { breath: 25, periodic: 60, night: false },
     evenings: { breath: 10, periodic: 0,  night: true, from: '21:00' },
-    all:      { breath: 10, periodic: 15, night: true }
+    all:      { breath: 10, periodic: 30, night: true }
   };
 
   const $ = (sel) => document.querySelector(sel);

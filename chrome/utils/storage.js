@@ -12,7 +12,7 @@ const DEFAULTS = {
   places: [],                        // [{ domain: 'youtube.com', posture: 'calm' }]
   blockDuringSessionsOnly: false,    // false = places set to block are always blocked
   periodicBreathEnabled: true,
-  periodicBreathInterval: 15,        // minutes
+  periodicBreathInterval: 30,        // minutes (30 minimum; 60 also offered)
   breathDuration: 10,                // seconds (rounded to whole breath cycles)
   breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
   timeMirrorEnabled: true,           // gentle notice after a long unbroken stay

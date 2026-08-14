@@ -296,8 +296,10 @@ async function maybeCalmGrayTab(tab) {
 
 // --- Gray prep (one minute before each periodic breath) ----------------------
 // The page fades to grayscale over the minute before the breath is armed, so
-// the pause is prepared for rather than sprung. Color returns the moment the
-// breath is delivered; the breath itself and everything after are normal.
+// the pause is prepared for rather than sprung. Only calmed places prepare this
+// way — everywhere else the breath still comes, it just isn't preceded by a
+// fade. Color returns the moment the breath is delivered; the breath itself and
+// everything after are normal.
 const GRAY_PREP_CSS = 'html{filter:grayscale(1) !important;transition:filter 55s linear !important;}';
 let grayPrepTabs = new Set();
 
@@ -309,6 +311,8 @@ async function grayPrepStart() {
   if (state !== 'active') return;                  // not here — nothing to prepare
   const tab = await activeHostTab();
   if (!tab || grayPrepTabs.has(tab.id)) return;
+  // The pre-breath fade belongs only to calmed places, not every site.
+  if (!placeDomains('calm').includes(getRootDomain(tab.url))) return;
   try {
     await chrome.scripting.insertCSS({ target: { tabId: tab.id }, css: GRAY_PREP_CSS });
     grayPrepTabs.add(tab.id);
@@ -372,7 +376,7 @@ function applyPeriodicBreath() {
   chrome.alarms.clear('miru-periodic');
   chrome.alarms.clear('miru-periodic-prep');
   if (settings.periodicBreathEnabled) {
-    const m = settings.periodicBreathInterval || 15;
+    const m = settings.periodicBreathInterval || 30;
     chrome.alarms.create('miru-periodic', { periodInMinutes: m, delayInMinutes: m });
     // The prep runs the same rhythm, one minute ahead: the page fades to gray
     // so the coming pause is prepared for, not sprung.
