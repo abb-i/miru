@@ -603,35 +603,12 @@ chrome.alarms.onAlarm.addListener(async (a) => {
     } else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
     await recordElapsed();  // flush in-progress time so calm budgets are current
-    await checkTimeMirror();
     await applyNightGray(); // re-evaluate the night window
     await applyCalmGray();  // gray any calmed site whose daily time is now spent
   }
 });
 
-// --- Time mirror --------------------------------------------------------------
-// A long unbroken stay on one domain meets a gentle notice — awareness, not
-// judgment. `tracker.start` marks when the current continuous stay began
-// (recordElapsed resets `since` for accounting but preserves `start`).
-async function checkTimeMirror() {
-  if (!settings.timeMirrorEnabled) return;
-  const { tracker } = await chrome.storage.local.get('tracker');
-  if (!tracker || !tracker.domain || !tracker.start) return;
-  const thresholdMs = Math.max(5, settings.timeMirrorMinutes || 20) * 60000;
-  const anchor = tracker.mirrorAt || tracker.start;
-  if (Date.now() - anchor < thresholdMs) return;
-  // Only when the person is actually there.
-  let state = 'active';
-  try { state = await chrome.idle.queryState(60); } catch (e) {}
-  if (state !== 'active') return;
-  const minutes = Math.round((Date.now() - tracker.start) / 60000);
-  await chrome.storage.local.set({ tracker: { ...tracker, mirrorAt: Date.now() } });
-  showBreath('timeMirror', settings.breathDuration || 10, {
-    mirror: tracker.domain, minutes: String(minutes)
-  });
-}
-
-// --- Standalone breath (manual / session end / mirror / periodic) -----------
+// --- Standalone breath (manual / session end / periodic) --------------------
 // Prefer an in-page overlay painted onto the tab the user is already looking at
 // — no context switch, nothing new in the app switcher, and dismissing it never
 // closes their actual work. Fall back to a fullscreen window only where a page
@@ -674,8 +651,7 @@ function injectBreath(opts) {
     window.MiruOverlay.injectFonts();
     window.MiruOverlay.renderBreath(document.body, {
       theme, pool: opts.pool, duration: opts.duration, pattern: opts.pattern,
-      domain: opts.mirror || '',
-      subtitle: opts.minutes ? ('You’ve been here ' + opts.minutes + ' minutes.') : '',
+      domain: '',
       askContinue: false,
       onDone: function () {}
     });
@@ -703,17 +679,14 @@ async function injectBreathInto(tabId, opts) {
 
 function breathWindow(opts) {
   const params = { session: '1', pool: opts.pool, duration: String(opts.duration), theme: opts.theme };
-  if (opts.mirror) params.mirror = opts.mirror;
-  if (opts.minutes) params.minutes = String(opts.minutes);
   const u = chrome.runtime.getURL('screens/breath.html') + '?' + new URLSearchParams(params).toString();
   chrome.windows.create({ url: u, type: 'popup', state: 'fullscreen', focused: true })
     .catch(() => chrome.tabs.create({ url: u }).catch(() => {}));
 }
 
-async function showBreath(pool, duration, extra = {}) {
+async function showBreath(pool, duration) {
   lastBreathAt = Date.now();
-  const opts = { theme: resolveTheme(), pool, duration, pattern: settings.breathPattern,
-    mirror: extra.mirror || '', minutes: extra.minutes || '' };
+  const opts = { theme: resolveTheme(), pool, duration, pattern: settings.breathPattern };
   const tab = await activeHostTab();
   if (tab && await injectBreathInto(tab.id, opts)) return;
   breathWindow(opts);
@@ -795,16 +768,7 @@ async function updateActive() {
     }
   } catch (e) {}
   if (!domain) { await chrome.storage.local.set({ tracker: null }); return; }
-  // Preserve the continuous-stay marker while the domain hasn't changed (the
-  // time mirror measures unbroken presence, not accumulated totals).
-  const { tracker: prev } = await chrome.storage.local.get('tracker');
-  const sameStay = prev && prev.domain === domain && prev.start;
-  await chrome.storage.local.set({ tracker: {
-    domain,
-    since: Date.now(),
-    start: sameStay ? prev.start : Date.now(),
-    mirrorAt: sameStay ? prev.mirrorAt : undefined
-  } });
+  await chrome.storage.local.set({ tracker: { domain, since: Date.now() } });
 }
 chrome.windows.onFocusChanged.addListener((wid) => {
   if (wid === chrome.windows.WINDOW_ID_NONE) recordElapsed().then(() => chrome.storage.local.set({ tracker: null }));

@@ -15,8 +15,6 @@ const DEFAULTS = {
   periodicBreathInterval: 30,        // minutes (30 minimum; 60 also offered)
   breathDuration: 10,                // seconds (rounded to whole breath cycles)
   breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
-  timeMirrorEnabled: true,           // gentle notice after a long unbroken stay
-  timeMirrorMinutes: 20,             // continuous minutes on one domain
   nightModeEnabled: false,
   nightModeStart: '22:00',
   nightModeEnd: '07:00',

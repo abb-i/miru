@@ -13,7 +13,9 @@ const WORDS = {
     'Surfacing.', 'Resetting.', 'Refilling.', 'Replenishing.', 'Reconsidering.',
     'Pausing.', 'Unwinding.', 'Releasing.', 'Tending.', 'Watering.',
     'Nourishing.', 'Warming.', 'Loosening.', 'Stretching.', 'Noticing.',
-    'Witnessing.', 'Listening.', 'Visiting.', 'Landing.', 'Exhaling.'
+    'Witnessing.', 'Listening.', 'Visiting.', 'Landing.', 'Exhaling.',
+    'Look up for a moment.', 'Surface for air.', 'The light has moved.',
+    'The garden waits outside.'
   ],
   blocker: [
     'Not today.', 'Not yet.', 'Still growing.', 'Protecting focus.',
@@ -28,12 +30,6 @@ const WORDS = {
   focusEnd: [
     'Harvesting focus.', 'Completing the season.', 'Session finished.',
     'Returning to open air.', 'The field rests.', 'Well tended.'
-  ],
-  timeMirror: [
-    'Still here.', 'Time pools quietly.', 'The water is deep here.',
-    'A long visit.', 'Look up for a moment.', 'Notice the hour.',
-    'Roots, or ruts?', 'Surface for air.', 'The garden waits outside.',
-    'How does this feel?', 'Deep in one place.', 'The light has moved.'
   ]
 };
 
