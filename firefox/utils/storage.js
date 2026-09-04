@@ -4,15 +4,16 @@
 const DEFAULTS = {
   // One list of places, each with a posture for how Miru meets you there:
   //   'breathe' — a breath at the door, the site untouched inside
-  //   'calm'    — a breath at the door AND the feeds quieted inside (where a
-  //               calm pack exists — utils/calm.js; elsewhere it just breathes)
+  //   'calm'    — a breath at the door, then a length you name (1–60 minutes,
+  //               the last of it grayscale, then another breath), and the feeds
+  //               quieted inside where a calm pack exists (utils/calm.js)
   //   'block'   — the block page, with the rationed five-minute peek
   // The whole array is a single sync item (~45 bytes per place against the
   // 8 KB per-item quota) — no chunking needed.
   places: [],                        // [{ domain: 'youtube.com', posture: 'calm' }]
   blockDuringSessionsOnly: false,    // false = places set to block are always blocked
   periodicBreathEnabled: true,
-  periodicBreathInterval: 30,        // minutes (30 minimum; 60 also offered)
+  periodicBreathInterval: 30,        // minutes — 30 or 60
   breathDuration: 10,                // seconds (rounded to whole breath cycles)
   breathPattern: 'settle',           // 'settle' | 'sigh' | 'box'
   nightModeEnabled: false,

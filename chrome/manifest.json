@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Miru",
-  "version": "2.1.5",
+  "version": "2.2.0",
   "description": "Browse with intention. A gentle breath before the places that pull at you, and calmer feeds inside.",
   "permissions": [
     "declarativeNetRequest",
@@ -15,6 +15,15 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["utils/media.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ],
   "action": {
     "default_popup": "popup/popup.html",
     "default_icon": {

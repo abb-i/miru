@@ -13,6 +13,10 @@
 //
 // Night is not a rule: during the night window the whole web fades to
 // grayscale instead (see applyNightGray) — a wind-down, not a wall.
+//
+// Neither is the periodic breath, nor the calm stay. The breath rides its own
+// interval across the whole browser (see maybeDeliverBreath); a calm place adds
+// a length the person names at the door and Miru then holds (see Calm stays).
 
 // Chrome runs this file as a service worker and pulls the utils in here.
 // Firefox runs it as an event page, where importScripts doesn't exist — there
@@ -230,103 +234,146 @@ function grayNightTab(tab) {
   chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['utils/gray.css'] }).catch(() => {});
 }
 
-// --- Calm budget gray (a calmed site goes gray once its daily time is spent) --
-// Once cumulative time today on a calmed domain crosses CALM_GRAY_MINUTES, that
-// domain renders grayscale for the rest of the day — surviving refreshes and new
-// tabs (re-applied on every load) — until the day rolls over and its usage
-// resets. Built on the same per-site daily usage the popup shows; the schedule
-// alarm flushes in-progress time so the budget stays current mid-visit. Its own
-// CSS string keeps it from ever fighting night gray's file.
-const CALM_GRAY_MINUTES = 15;
-const CALM_GRAY_CSS = 'html{filter:grayscale(1) !important;transition:filter 1.6s ease !important;}';
-let calmGrayTabs = new Set();
+// --- Calm stays (a named length of time inside a calmed place) ---------------
+// A place set to 'calm' is not rationed by the day and never fades slowly to
+// gray. Instead: a breath at the door, then you name how long you mean to stay
+// (1–60 minutes, the slider on the breath screen). Miru holds that length —
+// the last minute of it in grayscale, so the end is visible before it arrives —
+// and when it runs out another breath lands in the page and asks again. The
+// site keeps working throughout; what's interrupted is the drift, not the visit.
+//
+// One stay per tab, keyed by tab id in storage.local so it survives the worker
+// sleeping. Alarms (not setTimeout) carry the clock for the same reason.
+const STAY_GRAY_CSS = 'html{filter:grayscale(1) !important;transition:filter 2.5s ease !important;}';
+const STAY_GRAY_LEAD_MS = 60 * 1000;   // the last minute goes gray
 
-// Calmed domains whose cumulative time today is at or over the budget.
-async function calmOverBudget() {
+// Which tabs hold a stay, mirrored in memory: onUpdated fires for every
+// navigation in every tab, and most of them have nothing to do with a stay.
+// Hydrated on each worker wake (below), so a sleep doesn't lose the mirror.
+let stayTabs = new Set();
+
+async function getStays() {
+  const { calmStays = {} } = await chrome.storage.local.get('calmStays');
+  return calmStays;
+}
+async function setStays(stays) {
+  await chrome.storage.local.set({ calmStays: stays }).catch(() => {});
+}
+
+function stayAlarm(tabId) { return 'miru-stay-' + tabId; }
+function stayGrayAlarm(tabId) { return 'miru-stay-gray-' + tabId; }
+
+async function ungrayStay(tabId) {
+  await chrome.scripting.removeCSS({ target: { tabId }, css: STAY_GRAY_CSS }).catch(() => {});
+}
+
+// Begin (or renew) a stay on this tab. Renewing lifts the gray of the one
+// before it, so the fresh stretch starts in full color.
+async function startStay(tabId, domain, minutes) {
+  if (!Number.isInteger(tabId) || !domain) return;
+  const mins = Math.min(60, Math.max(1, Math.round(Number(minutes)) || 15));
+  const endsAt = Date.now() + mins * 60000;
+  const stays = await getStays();
+  stays[tabId] = { domain, endsAt, minutes: mins };
+  stayTabs.add(tabId);
+  await setStays(stays);
+  await chrome.storage.local.set({ calmLastMinutes: mins }).catch(() => {});
+  await ungrayStay(tabId);
+  chrome.alarms.create(stayAlarm(tabId), { when: endsAt });
+  // A one-minute stay is *all* last minute — an alarm already due fires at once.
+  chrome.alarms.create(stayGrayAlarm(tabId), { when: endsAt - STAY_GRAY_LEAD_MS });
+}
+
+// Drop a stay: the tab left the place, closed, or the place is no longer calmed.
+async function clearStay(tabId, { ungray = true } = {}) {
+  chrome.alarms.clear(stayAlarm(tabId));
+  chrome.alarms.clear(stayGrayAlarm(tabId));
+  stayTabs.delete(tabId);
+  const stays = await getStays();
+  if (tabId in stays) { delete stays[tabId]; await setStays(stays); }
+  if (ungray) await ungrayStay(tabId);
+}
+
+// After a reload, restore the gray if this tab's stay is already in its last
+// minute — the CSS went with the old document, the clock did not.
+async function restayGray(tabId) {
+  if (!stayTabs.has(tabId)) return;
+  const stays = await getStays();
+  const st = stays[tabId];
+  if (!st) return;
+  if (st.endsAt - Date.now() > STAY_GRAY_LEAD_MS) return;
+  chrome.scripting.insertCSS({ target: { tabId }, css: STAY_GRAY_CSS }).catch(() => {});
+}
+
+async function grayStayTab(tabId) {
+  const stays = await getStays();
+  if (!stays[tabId]) return;                       // stay ended early
+  chrome.scripting.insertCSS({ target: { tabId }, css: STAY_GRAY_CSS }).catch(() => {});
+}
+
+// The stay ran out: color returns with a breath, and the breath ends on the
+// slider again — stay longer, or leave. If the page can't host the overlay
+// (it was closed, or moved on), the stay simply ends.
+async function expireStay(tabId) {
+  const stays = await getStays();
+  const st = stays[tabId];
+  if (!st) return;
+  delete stays[tabId];
+  stayTabs.delete(tabId);
+  await setStays(stays);
+  chrome.alarms.clear(stayGrayAlarm(tabId));
+  await ungrayStay(tabId);
+  let tab;
+  try { tab = await chrome.tabs.get(tabId); } catch (e) { return; }   // tab gone
+  if (!tab || !/^https?:\/\//i.test(tab.url || '')) return;
+  if (getRootDomain(tab.url) !== st.domain) return;                    // moved on already
+  lastBreathAt = Date.now();
+  await injectBreathInto(tabId, {
+    theme: resolveTheme(), pool: 'periodic', duration: settings.breathDuration || 10,
+    pattern: settings.breathPattern, domain: st.domain,
+    askStay: true, stayDefault: st.minutes || 15
+  });
+}
+
+// A tab that navigated away from its stay's domain has left the place.
+async function stayFollowTab(tabId, url) {
+  if (!stayTabs.has(tabId)) return;
+  const stays = await getStays();
+  const st = stays[tabId];
+  if (!st) return;
+  if (/^https?:\/\//i.test(url || '') && getRootDomain(url) === st.domain) return;
+  await clearStay(tabId);
+}
+
+// Reconcile every stay against the tabs that actually exist — after a browser
+// restart the ids belong to other pages, and a crashed worker may have left
+// one behind. Also drops stays on places no longer set to calm.
+async function reconcileStays() {
+  const stays = await getStays();
+  const ids = Object.keys(stays);
+  stayTabs = new Set(ids.map(Number));
+  if (!ids.length) return;
   const calm = placeDomains('calm');
-  if (!calm.length) return new Set();
-  const { usage = {} } = await chrome.storage.local.get('usage');
-  const today = usage[todayKey()] || {};
-  return new Set(calm.filter((d) => (today[d] || 0) >= CALM_GRAY_MINUTES * 60));
-}
-
-// Reconcile every open tab: gray the calmed-and-spent ones, un-gray any we
-// grayed that no longer qualify (a new day, or a place no longer set to calm).
-async function applyCalmGray() {
-  const over = await calmOverBudget();
-  let tabs = [];
-  try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
-  const live = new Set();
-  let changed = false;
-  for (const t of tabs) {
-    if (t.id == null || !/^https?:\/\//i.test(t.url || '')) continue;
-    const shouldGray = over.has(getRootDomain(t.url)) && !isCustomExcepted(t.url);
-    if (shouldGray) {
-      live.add(t.id);
-      if (!calmGrayTabs.has(t.id)) {
-        chrome.scripting.insertCSS({ target: { tabId: t.id }, css: CALM_GRAY_CSS }).catch(() => {});
-        calmGrayTabs.add(t.id); changed = true;
-      }
-    } else if (calmGrayTabs.has(t.id)) {
-      chrome.scripting.removeCSS({ target: { tabId: t.id }, css: CALM_GRAY_CSS }).catch(() => {});
-      calmGrayTabs.delete(t.id); changed = true;
+  const next = {};
+  for (const key of ids) {
+    const tabId = Number(key);
+    const st = stays[key];
+    if (!Number.isInteger(tabId) || !st || st.endsAt <= Date.now() || !calm.includes(st.domain)) {
+      await clearStay(tabId);
+      continue;
     }
-  }
-  for (const id of [...calmGrayTabs]) if (!live.has(id)) { calmGrayTabs.delete(id); changed = true; }
-  if (changed) chrome.storage.local.set({ calmGrayTabs: [...calmGrayTabs] }).catch(() => {});
-}
-
-// A single tab that just (re)loaded: gray it if its calmed domain is spent.
-// A navigation clears the injected CSS, so onUpdated drops the id first and this
-// re-applies it — which is exactly what a refresh no longer escapes.
-async function maybeCalmGrayTab(tab) {
-  if (!tab || tab.id == null || !/^https?:\/\//i.test(tab.url || '')) return;
-  if (isCustomExcepted(tab.url)) return;
-  const dom = getRootDomain(tab.url);
-  if (!placeDomains('calm').includes(dom)) return;
-  const { usage = {} } = await chrome.storage.local.get('usage');
-  if (((usage[todayKey()] || {})[dom] || 0) >= CALM_GRAY_MINUTES * 60) {
-    chrome.scripting.insertCSS({ target: { tabId: tab.id }, css: CALM_GRAY_CSS }).catch(() => {});
-    if (!calmGrayTabs.has(tab.id)) {
-      calmGrayTabs.add(tab.id);
-      chrome.storage.local.set({ calmGrayTabs: [...calmGrayTabs] }).catch(() => {});
+    let tab;
+    try { tab = await chrome.tabs.get(tabId); } catch (e) { await clearStay(tabId); continue; }
+    if (!tab || !/^https?:\/\//i.test(tab.url || '') || getRootDomain(tab.url) !== st.domain) {
+      await clearStay(tabId);
+      continue;
     }
+    next[key] = st;
+    chrome.alarms.create(stayAlarm(tabId), { when: st.endsAt });
+    chrome.alarms.create(stayGrayAlarm(tabId), { when: st.endsAt - STAY_GRAY_LEAD_MS });
   }
-}
-
-// --- Gray prep (one minute before each periodic breath) ----------------------
-// The page fades to grayscale over the minute before the breath is armed, so
-// the pause is prepared for rather than sprung. Only calmed places prepare this
-// way — everywhere else the breath still comes, it just isn't preceded by a
-// fade. Color returns the moment the breath is delivered; the breath itself and
-// everything after are normal.
-const GRAY_PREP_CSS = 'html{filter:grayscale(1) !important;transition:filter 55s linear !important;}';
-let grayPrepTabs = new Set();
-
-async function grayPrepStart() {
-  if (!settings.periodicBreathEnabled) return;
-  if (Date.now() - lastBreathAt < 60000) return;   // just breathed — no prep needed
-  let state = 'active';
-  try { state = await chrome.idle.queryState(60); } catch (e) {}
-  if (state !== 'active') return;                  // not here — nothing to prepare
-  const tab = await activeHostTab();
-  if (!tab || grayPrepTabs.has(tab.id)) return;
-  // The pre-breath fade belongs only to calmed places, not every site.
-  if (!placeDomains('calm').includes(getRootDomain(tab.url))) return;
-  try {
-    await chrome.scripting.insertCSS({ target: { tabId: tab.id }, css: GRAY_PREP_CSS });
-    grayPrepTabs.add(tab.id);
-    await chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] });
-  } catch (e) {}
-}
-
-async function clearGrayPrep() {
-  const ids = [...grayPrepTabs];
-  grayPrepTabs.clear();
-  await chrome.storage.local.remove('grayPrepTabs').catch(() => {});
-  for (const id of ids) {
-    chrome.scripting.removeCSS({ target: { tabId: id }, css: GRAY_PREP_CSS }).catch(() => {});
-  }
+  stayTabs = new Set(Object.keys(next).map(Number));
+  await setStays(next);
 }
 
 // --- Lifecycle --------------------------------------------------------------
@@ -354,38 +401,34 @@ async function init() {
   await registerCalmScripts();
   await rebuildRules();
   await applyAllowRule();
-  // Un-gray tabs a sleeping/crashed worker left mid-prep, then reconcile night.
-  const { grayPrepTabs: stale = [] } = await chrome.storage.local.get('grayPrepTabs');
-  grayPrepTabs = new Set(stale);
-  await clearGrayPrep();
   await applyNightGray();
-  // Restore which tabs we've grayed for spent calm budgets, then reconcile.
-  const { calmGrayTabs: calmStale = [] } = await chrome.storage.local.get('calmGrayTabs');
-  calmGrayTabs = new Set(calmStale);
-  await applyCalmGray();
+  // Stale bookkeeping from the two grayscale systems v2.2 replaced with stays.
+  await chrome.storage.local.remove(['grayPrepTabs', 'calmGrayTabs']).catch(() => {});
+  await reconcileStays();
   applyPeriodicBreath();
   chrome.alarms.create('miru-schedule', { periodInMinutes: 1 });
   try { chrome.idle.setDetectionInterval(60); } catch (e) {}
 }
-async function reloadSettings() { settings = await getSettings(); }
+async function reloadSettings() {
+  settings = await getSettings();
+  // 45m was an option before v2.2; the rhythm is half-hourly or hourly now.
+  const iv = settings.periodicBreathInterval;
+  if (iv !== 30 && iv !== 60) settings.periodicBreathInterval = iv > 30 ? 60 : 30;
+}
 
 // Periodic breath runs globally on its own rhythm — not tied to focus sessions.
 // Recreating the alarm restarts the interval, so only call this when the
 // enabled flag or interval actually changes (or on worker init).
 function applyPeriodicBreath() {
   chrome.alarms.clear('miru-periodic');
-  chrome.alarms.clear('miru-periodic-prep');
+  chrome.alarms.clear('miru-periodic-prep');   // v2.1's pre-breath fade, retired
   if (settings.periodicBreathEnabled) {
     const m = settings.periodicBreathInterval || 30;
     chrome.alarms.create('miru-periodic', { periodInMinutes: m, delayInMinutes: m });
-    // The prep runs the same rhythm, one minute ahead: the page fades to gray
-    // so the coming pause is prepared for, not sprung.
-    if (m > 1) chrome.alarms.create('miru-periodic-prep', { periodInMinutes: m, delayInMinutes: m - 1 });
   } else {
     // Turned off: drop any breath that was armed but not yet delivered.
     breathDue = null;
     chrome.storage.local.remove('breathDue').catch(() => {});
-    clearGrayPrep();
   }
 }
 
@@ -429,6 +472,13 @@ reloadSettings(); // keep `settings` warm for messaging on every worker wake
 // Same for the session flag — rebuildRules on a fresh worker must not see it
 // stale-false and drop rules mid-session.
 getActiveSession().then((s) => { sessionActive = !!s; });
+// And the stay mirror, so a woken worker knows which tabs are inside a place.
+getStays().then((st) => { stayTabs = new Set(Object.keys(st).map(Number)); });
+// And any breath still waiting to land — a worker woken by an alarm doesn't run
+// init(), and without this the schedule tick would see nothing pending.
+chrome.storage.local.get('breathDue').then(({ breathDue: bd }) => {
+  if (bd && !breathDue) breathDue = bd;
+});
 
 chrome.storage.onChanged.addListener(async (c, area) => {
   if (area === 'sync') {
@@ -436,7 +486,7 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     await rebuildRules();
     await applyAllowRule();
     await applyNightGray();
-    if (c.places) { await registerCalmScripts(); await applyCalmGray(); }
+    if (c.places) { await registerCalmScripts(); await reconcileStays(); }
     // Only restart the periodic-breath timer when its own settings change, so
     // editing unrelated settings doesn't reset the interval.
     if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
@@ -544,20 +594,18 @@ chrome.tabs.onUpdated.addListener((id, info, tab) => {
   if (info.status === 'complete') DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   if (info.url || info.status === 'complete') { scheduleAllow(); updateActive(); }
   if (nightGrayOn && info.status === 'complete') grayNightTab(tab);
-  // A navigation cleared any prep CSS with the page it was injected into.
-  if (info.url && grayPrepTabs.delete(id)) chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] }).catch(() => {});
-  // Budget gray: a navigation clears the injected CSS (drop the id), then a
-  // finished load re-applies it if the calmed domain's daily time is spent.
-  if (info.url) calmGrayTabs.delete(id);
-  if (info.status === 'complete') maybeCalmGrayTab(tab);
+  // Leaving a calmed place ends its stay; staying inside it keeps the clock.
+  if (info.url) stayFollowTab(id, info.url);
+  // A reload takes the injected CSS with it — put the gray back if the stay is
+  // already inside its last minute, so a refresh isn't a way out of it.
+  if (info.status === 'complete') restayGray(id);
   // A finished navigation on the active tab is a natural seam for an armed breath.
   if (breathDue && info.status === 'complete' && tab && tab.active) maybeDeliverBreath();
 });
 chrome.tabs.onRemoved.addListener((id) => {
   DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   endPeek(id);
-  if (grayPrepTabs.delete(id)) chrome.storage.local.set({ grayPrepTabs: [...grayPrepTabs] }).catch(() => {});
-  calmGrayTabs.delete(id);
+  clearStay(id, { ungray: false });   // the tab is gone; nothing left to un-gray
   scheduleAllow();
 });
 chrome.tabs.onCreated.addListener(() => scheduleAllow());
@@ -588,13 +636,16 @@ chrome.alarms.onAlarm.addListener(async (a) => {
   if (a.name === 'miru-session-end') await endSession();
   else if (a.name === 'miru-periodic') {
     if (!settings.periodicBreathEnabled) { chrome.alarms.clear('miru-periodic'); return; }
-    // Arm, don't fire: the breath waits for the next natural seam (a tab switch
-    // or a finished navigation) so it rides a transition instead of cutting in.
-    // A single latched flag means being away just leaves it armed — no pile-up.
+    // Arm and deliver at once. A single latched flag means anything that holds
+    // the breath back (away, a call, a fullscreen video) just leaves it armed
+    // for the next attempt — the rhythm never doubles up.
     await armPeriodicBreath();
   } else if (a.name === 'miru-periodic-prep') {
-    if (settings.periodicBreathEnabled) await grayPrepStart();
-    else chrome.alarms.clear('miru-periodic-prep');
+    chrome.alarms.clear('miru-periodic-prep');   // v2.1 leftover; the fade is gone
+  } else if (a.name.startsWith('miru-stay-gray-')) {
+    await grayStayTab(Number(a.name.slice('miru-stay-gray-'.length)));
+  } else if (a.name.startsWith('miru-stay-')) {
+    await expireStay(Number(a.name.slice('miru-stay-'.length)));
   } else if (a.name.startsWith('miru-peek-')) {
     const rest = a.name.slice('miru-peek-'.length);
     if (rest === 'shared') {
@@ -602,9 +653,11 @@ chrome.alarms.onAlarm.addListener(async (a) => {
       await chrome.scripting.unregisterContentScripts({ ids: [CALM_ID + '-peek-shared'] }).catch(() => {});
     } else { const tabId = Number(rest); if (!Number.isNaN(tabId)) await endPeek(tabId); }
   } else if (a.name === 'miru-schedule') {
-    await recordElapsed();  // flush in-progress time so calm budgets are current
+    await recordElapsed();  // flush in-progress time into today's usage
     await applyNightGray(); // re-evaluate the night window
-    await applyCalmGray();  // gray any calmed site whose daily time is now spent
+    // A breath that couldn't land when it was due (away, a call, a fullscreen
+    // video) tries again every minute until the moment is right.
+    if (breathDue) await maybeDeliverBreath();
   }
 });
 
@@ -639,7 +692,8 @@ async function activeHostTab() {
 }
 
 // Runs *in the page* (serialized by scripting.executeScript). Must be
-// self-contained — no closure references.
+// self-contained — no closure references. It lands in the isolated world, so
+// chrome.runtime is available: the stay choice reports straight back.
 function injectBreath(opts) {
   try {
     if (!window.MiruOverlay || !document.body) return false;
@@ -648,11 +702,20 @@ function injectBreath(opts) {
     if (theme === 'auto') {
       theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
     }
+    var tell = function (msg) { try { chrome.runtime.sendMessage(msg); } catch (e) {} };
     window.MiruOverlay.injectFonts();
     window.MiruOverlay.renderBreath(document.body, {
       theme, pool: opts.pool, duration: opts.duration, pattern: opts.pattern,
-      domain: '',
+      domain: opts.domain || '',
       askContinue: false,
+      askStay: !!opts.askStay,
+      stayDefault: opts.stayDefault || 15,
+      backLabel: 'leave',
+      onStay: function (minutes) { tell({ type: 'MIRU_STAY_AGAIN', minutes: minutes }); },
+      onBack: function () {
+        tell({ type: 'MIRU_STAY_LEAVE' });
+        if (history.length > 1) history.back();
+      },
       onDone: function () {}
     });
     return true;
@@ -692,25 +755,65 @@ async function showBreath(pool, duration) {
   breathWindow(opts);
 }
 
-// --- Periodic breath: armed by the interval, delivered at a natural seam ------
-// The rhythm shouldn't slice into focus. When the interval elapses we *arm* the
-// breath rather than fire it, then deliver at the next moment attention is
-// already moving — a tab switch or a completed navigation. In unbroken deep
-// flow (no seam) it simply waits; a breath is meant to catch a transition.
+// --- Periodic breath: the whole browser, on the interval ---------------------
+// When the interval elapses the breath comes — on whatever site is open, not
+// only the named ones, and without waiting for a tab switch to volunteer one.
+// Two things make it stand aside, and nothing else does:
+//
+//   • something is playing or presenting in fullscreen
+//   • a microphone, camera or screen capture is live (a call, a recording)
+//
+// Being away from the keyboard also holds it, since a breath nobody sees is
+// wasted. In any of those cases the breath stays *armed*, not skipped: the
+// one-minute schedule alarm re-offers it, as does the next tab switch or
+// finished navigation, so it lands the moment the way is clear.
 let breathDue = null;   // { pool, duration } when armed, else null
 let delivering = false;
 
 async function armPeriodicBreath() {
   breathDue = { pool: 'periodic', duration: settings.breathDuration || 10 };
   await chrome.storage.local.set({ breathDue }).catch(() => {});
+  await maybeDeliverBreath();   // due now — try to land it now
+}
+
+// Is anything on this tab playing fullscreen? Element fullscreen (a video, a
+// slide deck) is the honest signal — a browser window the person simply keeps
+// fullscreen all day must not cost them every breath. Frames count too: most
+// embedded players go fullscreen from inside an iframe.
+async function fullscreenActive(tab) {
+  try {
+    const res = await chrome.scripting.executeScript({
+      target: { tabId: tab.id, allFrames: true },
+      func: () => !!document.fullscreenElement
+    });
+    return res.some((r) => r && r.result);
+  } catch (e) { return false; }
+}
+
+// Is a microphone / camera / screen capture live anywhere? utils/media.js marks
+// the page it happens in; a call in a background tab counts just as much as one
+// in front, so every http(s) tab is asked.
+let captureCache = { at: 0, on: false };
+async function captureActive() {
+  if (Date.now() - captureCache.at < 15000) return captureCache.on;
+  let tabs = [];
+  try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return false; }
+  const checks = tabs.map((t) => chrome.scripting.executeScript({
+    target: { tabId: t.id },
+    func: () => document.documentElement.hasAttribute('data-miru-capture')
+  }).then((r) => !!(r && r[0] && r[0].result)).catch(() => false));
+  let on = false;
+  try { on = (await Promise.all(checks)).some(Boolean); } catch (e) { on = false; }
+  captureCache = { at: Date.now(), on };
+  return on;
 }
 
 async function maybeDeliverBreath() {
   if (!breathDue || delivering) return;
   // Take the lock before any await: maybeDeliverBreath fires on every tab
-  // switch and completed navigation, so two events could otherwise both pass
-  // the guard, both await, and the second would read due.pool after the first
-  // already delivered and cleared breathDue. finally always releases it.
+  // switch, completed navigation and schedule tick, so two events could
+  // otherwise both pass the guard, both await, and the second would read
+  // due.pool after the first already delivered. finally always releases it.
   delivering = true;
   try {
     if (Date.now() - lastBreathAt < 60000) return;   // just breathed — let it settle
@@ -718,16 +821,19 @@ async function maybeDeliverBreath() {
     try { state = await chrome.idle.queryState(60); } catch (e) {}
     if (state !== 'active') return;                  // not here — keep waiting
     const tab = await activeHostTab();
-    if (!tab) return;                                // wait for a seam we can host
+    if (tab && await fullscreenActive(tab)) return;  // let it play out
+    if (await captureActive()) return;               // a call, a recording — not now
     if (!breathDue) return;                          // delivered elsewhere while we awaited
     const due = breathDue;
     breathDue = null;
     await chrome.storage.local.remove('breathDue').catch(() => {});
-    await clearGrayPrep();   // color returns with the breath
     lastBreathAt = Date.now();
     const opts = { theme: resolveTheme(), pool: due.pool, duration: due.duration,
-      pattern: settings.breathPattern, mirror: '', minutes: '' };
-    if (!(await injectBreathInto(tab.id, opts))) breathWindow(opts);
+      pattern: settings.breathPattern };
+    // A page that can host the overlay gets it; anywhere else (a new tab, the
+    // settings, a chrome:// page) the breath opens as its own window, so the
+    // rhythm holds no matter where the browser happens to be.
+    if (!(tab && await injectBreathInto(tab.id, opts))) breathWindow(opts);
   } finally {
     delivering = false;
   }
@@ -788,6 +894,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       case 'MIRU_CONTINUE': {
         const id = msg.tabId || (sender.tab && sender.tab.id);
         if (id != null) await allowOnce(id, msg.target);
+        sendResponse({ ok: true });
+        break;
+      }
+      // A calmed place: the same one-time pass, plus the stay the person just
+      // named on the slider. Registered before breath.js navigates, so the
+      // clock starts at the door rather than a beat later.
+      case 'MIRU_CALM_CONTINUE': {
+        const id = msg.tabId || (sender.tab && sender.tab.id);
+        if (id != null) {
+          await allowOnce(id, msg.target);
+          await startStay(id, getRootDomain(msg.target || ''), msg.minutes);
+        }
+        sendResponse({ ok: true });
+        break;
+      }
+      // The stay ran out and the breath landed in the page: stay longer, or go.
+      case 'MIRU_STAY_AGAIN': {
+        const id = sender.tab && sender.tab.id;
+        if (id != null) await startStay(id, getRootDomain(sender.tab.url || ''), msg.minutes);
+        sendResponse({ ok: true });
+        break;
+      }
+      case 'MIRU_STAY_LEAVE': {
+        const id = sender.tab && sender.tab.id;
+        if (id != null) await clearStay(id);
         sendResponse({ ok: true });
         break;
       }

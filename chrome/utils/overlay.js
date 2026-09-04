@@ -102,6 +102,24 @@
 .miru-intent:focus{border-color:var(--green);}
 .miru-intent::placeholder{color:var(--muted);opacity:.55;}
 .miru-actions{display:flex;gap:1rem;align-items:center;margin-top:.6rem;flex-wrap:wrap;justify-content:center;}
+
+/* Stay slider — how long to stay in a calmed place */
+.miru-overlay .miru-stay{display:flex;flex-direction:column;align-items:center;gap:.7rem;width:min(340px,78vw);}
+.miru-overlay .miru-stay-val{font-family:'Cormorant Garamond',Georgia,serif;font-weight:300;font-size:30px;
+  color:var(--text);line-height:1.1;}
+.miru-overlay .miru-stay-val b{font-weight:400;color:var(--accent);font-variant-numeric:tabular-nums;}
+.miru-overlay .miru-range{-webkit-appearance:none;appearance:none;box-sizing:border-box;display:block;
+  width:100%;height:18px;margin:0;padding:0;background:transparent;border:none;outline:none;cursor:pointer;}
+.miru-overlay .miru-range::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:var(--border);}
+.miru-overlay .miru-range::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:15px;height:15px;
+  margin-top:-6.5px;border-radius:50%;background:var(--green);border:none;cursor:pointer;
+  box-shadow:0 0 0 0 rgba(45,169,110,.25);transition:box-shadow .25s ease;}
+.miru-overlay .miru-range:hover::-webkit-slider-thumb{box-shadow:0 0 0 6px rgba(45,169,110,.18);}
+.miru-overlay .miru-range::-moz-range-track{height:2px;border-radius:2px;background:var(--border);}
+.miru-overlay .miru-range::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--green);
+  border:none;cursor:pointer;}
+.miru-overlay .miru-ticks{display:flex;justify-content:space-between;width:100%;font-size:11px;
+  letter-spacing:.04em;color:var(--muted);opacity:.55;}
 .miru-continue{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:19px;color:#f7f5ef;
   background:var(--green);border:none;border-radius:8px;padding:11px 28px;cursor:pointer;transition:background .2s ease;}
 .miru-continue:hover{background:var(--green-dark);}
@@ -120,6 +138,23 @@
 .miru-peek-note{font-size:11px;color:var(--muted);opacity:.5;letter-spacing:.02em;margin-top:-1rem;}
 @keyframes miru-rise{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 `;
+
+  // Some sites enforce Trusted Types, and that policy reaches an extension's
+  // isolated world too — a raw innerHTML assignment there throws and the breath
+  // never paints. Mint a pass-through policy where one is allowed; where it
+  // isn't, the caller's try/catch falls back to the standalone breath window.
+  let ttPolicy;
+  function safeHTML(str) {
+    if (ttPolicy === undefined) {
+      ttPolicy = null;
+      try {
+        if (window.trustedTypes && window.trustedTypes.createPolicy) {
+          ttPolicy = window.trustedTypes.createPolicy('miru-overlay', { createHTML: (s) => s });
+        }
+      } catch (e) { ttPolicy = null; }
+    }
+    try { return ttPolicy ? ttPolicy.createHTML(str) : str; } catch (e) { return str; }
+  }
 
   function ensureStyle(root) {
     // Prefer a constructable stylesheet: it applies even under a strict page CSP
@@ -162,10 +197,14 @@
     o.className = 'miru-overlay miru-' + (opts.theme === 'light' ? 'light' : 'dark');
     const domain = hostnameOf(opts.domain || '');
     const pattern = PATTERNS[opts.pattern] || PATTERNS.settle;
+    // The stay choice replaces the plain continue in calmed places: the breath
+    // lands, then you name how long you mean to be here (1–60 minutes).
+    const askStay = !!opts.askStay;
+    const stayDefault = Math.min(60, Math.max(1, Math.round(opts.stayDefault || 15)));
     const cycleMs = pattern.phases.reduce((a, p) => a + p.ms, 0);
     const totalCycles = Math.max(1, Math.round(((opts.duration || 15) * 1000) / cycleMs)) + (opts.extraCycles || 0);
 
-    o.innerHTML = `
+    o.innerHTML = safeHTML(`
       <div class="miru-breath">
         <div class="miru-orb">
           <div class="miru-glow"></div>
@@ -181,13 +220,22 @@
       </div>
       <div class="miru-choice">
         <div class="miru-arrive"></div>
-        <div class="miru-q">${domain ? `Continue to <b>${domain}</b>?` : 'Continue?'}</div>
+        <div class="miru-q">${askStay
+          ? (domain ? `How long on <b>${domain}</b>?` : 'How long?')
+          : (domain ? `Continue to <b>${domain}</b>?` : 'Continue?')}</div>
+        ${askStay ? `
+        <div class="miru-stay">
+          <div class="miru-stay-val"><b>${stayDefault}</b> minutes</div>
+          <input class="miru-range" type="range" min="1" max="60" step="1" value="${stayDefault}"
+                 aria-label="minutes to stay" />
+          <div class="miru-ticks"><span>1m</span><span>60m</span></div>
+        </div>` : ''}
         <div class="miru-actions">
-          <button class="miru-continue">continue</button>
-          <button class="miru-ghost miru-back">go back</button>
+          <button class="miru-continue">${askStay ? 'stay' : 'continue'}</button>
+          <button class="miru-ghost miru-back">${opts.backLabel || 'go back'}</button>
         </div>
       </div>
-      ${domain ? `<div class="miru-pill">${domain}</div>` : ''}`;
+      ${domain ? `<div class="miru-pill">${domain}</div>` : ''}`);
     root.appendChild(o);
 
     const orb = o.querySelector('.miru-orb');
@@ -264,7 +312,7 @@
       if (ended) return;
       ended = true;
       clearTimeout(phaseTimer);
-      if (opts.askContinue) {
+      if (opts.askContinue || askStay) {
         breathView.classList.add('hide');
         setTimeout(() => {
           breathView.style.display = 'none';
@@ -276,12 +324,29 @@
       }
     }
 
-    o.querySelector('.miru-continue').addEventListener('click', () => dismiss(opts.onContinue));
+    if (askStay) {
+      const range = o.querySelector('.miru-range');
+      const val = o.querySelector('.miru-stay-val');
+      const paint = () => {
+        const n = Number(range.value);
+        const b = document.createElement('b');
+        b.textContent = String(n);
+        val.textContent = '';
+        val.append(b, n === 1 ? ' minute' : ' minutes');
+      };
+      range.addEventListener('input', paint);
+      paint();
+      o.querySelector('.miru-continue').addEventListener('click',
+        () => dismiss(opts.onStay, Number(range.value)));
+    } else {
+      o.querySelector('.miru-continue').addEventListener('click', () => dismiss(opts.onContinue));
+    }
     o.querySelector('.miru-back').addEventListener('click', () => dismiss(opts.onBack));
 
     // The breath itself cannot be skipped. Keys only act once it has finished.
+    // The stay choice isn't escapable either — naming a length is the point.
     function onKey(e) {
-      if (e.key !== 'Escape' || !ended) return;
+      if (e.key !== 'Escape' || !ended || askStay) return;
       dismiss(opts.askContinue ? opts.onContinue : opts.onDone);
     }
     document.addEventListener('keydown', onKey, true);
@@ -303,7 +368,7 @@
     const o = document.createElement('div');
     o.className = 'miru-overlay miru-' + (opts.theme === 'light' ? 'light' : 'dark');
     const domain = hostnameOf(opts.domain || '');
-    o.innerHTML = `
+    o.innerHTML = safeHTML(`
       <div class="miru-block">
         <svg class="miru-spiral-lg" viewBox="0 0 48 56" width="50" height="58" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="${SPIRAL}" stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none"/>
@@ -313,7 +378,7 @@
         <button class="miru-ghost miru-back">go back</button>
         ${opts.onPeek ? `<button class="miru-peek">stay five minutes</button>` : ''}
         ${opts.onPeek && opts.peekNote ? `<div class="miru-peek-note">${opts.peekNote}</div>` : ''}
-      </div>`;
+      </div>`);
     root.appendChild(o);
     o.querySelector('.miru-not').textContent = word('blocker') || 'Not today.';
 

@@ -15,18 +15,16 @@ const ALWAYS_EXCLUDED = [
 ];
 
 // Opt-in suggestions for the breath list — commonly distracting places, offered
-// as pills the user actively taps. Never activated without that choice.
+// as pills the user actively taps. Never activated without that choice. Kept to
+// the same six the welcome offers: a longer row of options crowds the settings,
+// and anything else is one line in the field below it.
 const COMMONLY_DISTRACTING = [
   { domain: 'instagram.com', label: 'Instagram' },
-  { domain: 'tiktok.com', label: 'TikTok' },
-  { domain: 'youtube.com', label: 'YouTube' },
   { domain: 'x.com', label: 'X' },
+  { domain: 'tiktok.com', label: 'TikTok' },
   { domain: 'reddit.com', label: 'Reddit' },
   { domain: 'facebook.com', label: 'Facebook' },
-  { domain: 'twitch.tv', label: 'Twitch' },
-  { domain: 'netflix.com', label: 'Netflix' },
-  { domain: 'pinterest.com', label: 'Pinterest' },
-  { domain: 'linkedin.com', label: 'LinkedIn' }
+  { domain: 'youtube.com', label: 'YouTube' }
 ];
 
 // URL schemes Miru must never touch.

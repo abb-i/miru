@@ -46,7 +46,8 @@ async function loadAll() {
   selectPill('breath-len-pills', 'len', s.breathDuration <= 15 ? 10 : 25);
   selectPill('pattern-pills', 'pattern', s.breathPattern);
   document.getElementById('periodic-breath').checked = s.periodicBreathEnabled;
-  selectPill('interval-pills', 'int', s.periodicBreathInterval);
+  // 45m was offered before v2.2 — anything above half an hour lands on the hour.
+  selectPill('interval-pills', 'int', s.periodicBreathInterval > 30 ? 60 : 30);
 
   // Night mode
   document.getElementById('night-enabled').checked = s.nightModeEnabled;
@@ -224,12 +225,16 @@ async function setPosture(domain, posture) {
 }
 
 // Suggestion pills come from COMMONLY_DISTRACTING (utils/domains.js). A pill
-// already on the list shows selected; tapping toggles membership.
+// already on the list shows selected; tapping toggles membership. The chosen
+// ones gather at the front, so the green never sits scattered between grays —
+// sort is stable, so each group keeps its own order.
 function renderPlaceSuggestions(places) {
   const wrap = document.getElementById('place-suggest-pills');
   const listed = new Set(places.map(p => p.domain));
   wrap.innerHTML = '';
-  COMMONLY_DISTRACTING.forEach(({ domain, label }) => {
+  const ordered = [...COMMONLY_DISTRACTING].sort(
+    (a, b) => (listed.has(b.domain) ? 1 : 0) - (listed.has(a.domain) ? 1 : 0));
+  ordered.forEach(({ domain, label }) => {
     const pill = document.createElement('button');
     pill.type = 'button';
     pill.className = 'pill' + (listed.has(domain) ? ' selected' : '');
