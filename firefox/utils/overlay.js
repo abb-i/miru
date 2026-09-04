@@ -123,6 +123,8 @@
 .miru-continue{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:19px;color:#f7f5ef;
   background:var(--green);border:none;border-radius:8px;padding:11px 28px;cursor:pointer;transition:background .2s ease;}
 .miru-continue:hover{background:var(--green-dark);}
+.miru-continue:disabled{background:var(--border);color:var(--muted);cursor:default;}
+.miru-continue:disabled:hover{background:var(--border);}
 .miru-ghost{font-size:13px;color:var(--muted);background:none;border:.5px solid var(--border);border-radius:20px;
   padding:10px 22px;cursor:pointer;transition:all .2s ease;}
 .miru-ghost:hover{color:var(--text);border-color:var(--muted);}
@@ -198,9 +200,11 @@
     const domain = hostnameOf(opts.domain || '');
     const pattern = PATTERNS[opts.pattern] || PATTERNS.settle;
     // The stay choice replaces the plain continue in calmed places: the breath
-    // lands, then you name how long you mean to be here (1–60 minutes).
+    // lands, then you name how long you mean to be here. The dial always opens
+    // at zero — never on the last answer — so the length is chosen on purpose
+    // every single time, and 'stay' stays inert until you have moved it.
     const askStay = !!opts.askStay;
-    const stayDefault = Math.min(60, Math.max(1, Math.round(opts.stayDefault || 15)));
+    const stayMax = Math.min(480, Math.max(1, Math.round(opts.stayMax || 60)));
     const cycleMs = pattern.phases.reduce((a, p) => a + p.ms, 0);
     const totalCycles = Math.max(1, Math.round(((opts.duration || 15) * 1000) / cycleMs)) + (opts.extraCycles || 0);
 
@@ -225,10 +229,10 @@
           : (domain ? `Continue to <b>${domain}</b>?` : 'Continue?')}</div>
         ${askStay ? `
         <div class="miru-stay">
-          <div class="miru-stay-val"><b>${stayDefault}</b> minutes</div>
-          <input class="miru-range" type="range" min="1" max="60" step="1" value="${stayDefault}"
+          <div class="miru-stay-val"><b>0</b> minutes</div>
+          <input class="miru-range" type="range" min="0" max="${stayMax}" step="1" value="0"
                  aria-label="minutes to stay" />
-          <div class="miru-ticks"><span>1m</span><span>60m</span></div>
+          <div class="miru-ticks"><span>0m</span><span>${stayMax}m</span></div>
         </div>` : ''}
         <div class="miru-actions">
           <button class="miru-continue">${askStay ? 'stay' : 'continue'}</button>
@@ -327,17 +331,23 @@
     if (askStay) {
       const range = o.querySelector('.miru-range');
       const val = o.querySelector('.miru-stay-val');
+      const stayBtn = o.querySelector('.miru-continue');
       const paint = () => {
         const n = Number(range.value);
         const b = document.createElement('b');
         b.textContent = String(n);
         val.textContent = '';
         val.append(b, n === 1 ? ' minute' : ' minutes');
+        // Nothing to agree to at zero: the door only opens on a length.
+        stayBtn.disabled = n < 1;
       };
       range.addEventListener('input', paint);
       paint();
-      o.querySelector('.miru-continue').addEventListener('click',
-        () => dismiss(opts.onStay, Number(range.value)));
+      stayBtn.addEventListener('click', () => {
+        const n = Number(range.value);
+        if (n < 1) return;
+        dismiss(opts.onStay, n);
+      });
     } else {
       o.querySelector('.miru-continue').addEventListener('click', () => dismiss(opts.onContinue));
     }

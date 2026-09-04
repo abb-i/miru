@@ -158,6 +158,11 @@ input::placeholder { color: var(--muted); opacity: 0.8; }
 input:focus { border-color: var(--green-primary); }
 input[type="range"] { width: 100%; accent-color: var(--green-primary); }
 
+/* A number that keeps its unit beside it instead of stretching the row. */
+.num-field { display: flex; align-items: center; gap: 10px; }
+.num-field input { width: 92px; }
+.num-unit { font-size: 13px; font-weight: 300; color: var(--muted); }
+
 /* Pills */
 .pills { display: flex; gap: 7px; flex-wrap: wrap; }
 .pill {

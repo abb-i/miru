@@ -237,7 +237,8 @@ function grayNightTab(tab) {
 // --- Calm stays (a named length of time inside a calmed place) ---------------
 // A place set to 'calm' is not rationed by the day and never fades slowly to
 // gray. Instead: a breath at the door, then you name how long you mean to stay
-// (1–60 minutes, the slider on the breath screen). Miru holds that length —
+// on a dial that reaches as far as settings.calmStayMax and always opens at
+// zero, so the length is a decision and never a default. Miru holds it —
 // the last minute of it in grayscale, so the end is visible before it arrives —
 // and when it runs out another breath lands in the page and asks again. The
 // site keeps working throughout; what's interrupted is the drift, not the visit.
@@ -246,6 +247,13 @@ function grayNightTab(tab) {
 // sleeping. Alarms (not setTimeout) carry the clock for the same reason.
 const STAY_GRAY_CSS = 'html{filter:grayscale(1) !important;transition:filter 2.5s ease !important;}';
 const STAY_GRAY_LEAD_MS = 60 * 1000;   // the last minute goes gray
+const STAY_MAX_CEILING = 480;          // eight hours — as far as the setting may reach
+
+// How far the dial reaches, and the cap every named length is held to.
+function stayCap() {
+  const n = Math.round(Number(settings && settings.calmStayMax));
+  return Number.isFinite(n) ? Math.min(STAY_MAX_CEILING, Math.max(1, n)) : 60;
+}
 
 // Which tabs hold a stay, mirrored in memory: onUpdated fires for every
 // navigation in every tab, and most of them have nothing to do with a stay.
@@ -271,13 +279,16 @@ async function ungrayStay(tabId) {
 // before it, so the fresh stretch starts in full color.
 async function startStay(tabId, domain, minutes) {
   if (!Number.isInteger(tabId) || !domain) return;
-  const mins = Math.min(60, Math.max(1, Math.round(Number(minutes)) || 15));
+  // Zero is not a stay — the dial opens there and the door stays shut until
+  // it moves, so a zero here is a stray message, not a choice.
+  const asked = Math.round(Number(minutes));
+  if (!Number.isFinite(asked) || asked < 1) return;
+  const mins = Math.min(stayCap(), asked);
   const endsAt = Date.now() + mins * 60000;
   const stays = await getStays();
   stays[tabId] = { domain, endsAt, minutes: mins };
   stayTabs.add(tabId);
   await setStays(stays);
-  await chrome.storage.local.set({ calmLastMinutes: mins }).catch(() => {});
   await ungrayStay(tabId);
   chrome.alarms.create(stayAlarm(tabId), { when: endsAt });
   // A one-minute stay is *all* last minute — an alarm already due fires at once.
@@ -331,7 +342,7 @@ async function expireStay(tabId) {
   await injectBreathInto(tabId, {
     theme: resolveTheme(), pool: 'periodic', duration: settings.breathDuration || 10,
     pattern: settings.breathPattern, domain: st.domain,
-    askStay: true, stayDefault: st.minutes || 15
+    askStay: true, stayMax: stayCap()
   });
 }
 
@@ -347,13 +358,15 @@ async function stayFollowTab(tabId, url) {
 
 // Reconcile every stay against the tabs that actually exist — after a browser
 // restart the ids belong to other pages, and a crashed worker may have left
-// one behind. Also drops stays on places no longer set to calm.
+// one behind. Also drops stays on places no longer set to calm, and pulls a
+// stay still running past a lowered ceiling back in to it.
 async function reconcileStays() {
   const stays = await getStays();
   const ids = Object.keys(stays);
   stayTabs = new Set(ids.map(Number));
   if (!ids.length) return;
   const calm = placeDomains('calm');
+  const capMs = stayCap() * 60000;
   const next = {};
   for (const key of ids) {
     const tabId = Number(key);
@@ -367,6 +380,12 @@ async function reconcileStays() {
     if (!tab || !/^https?:\/\//i.test(tab.url || '') || getRootDomain(tab.url) !== st.domain) {
       await clearStay(tabId);
       continue;
+    }
+    // A shortened ceiling takes effect on the stays already running, so the
+    // setting means the same thing everywhere it applies.
+    if (st.endsAt - Date.now() > capMs) {
+      st.endsAt = Date.now() + capMs;
+      st.minutes = stayCap();
     }
     next[key] = st;
     chrome.alarms.create(stayAlarm(tabId), { when: st.endsAt });
@@ -403,7 +422,8 @@ async function init() {
   await applyAllowRule();
   await applyNightGray();
   // Stale bookkeeping from the two grayscale systems v2.2 replaced with stays.
-  await chrome.storage.local.remove(['grayPrepTabs', 'calmGrayTabs']).catch(() => {});
+  await chrome.storage.local.remove(
+    ['grayPrepTabs', 'calmGrayTabs', 'calmLastMinutes']).catch(() => {});
   await reconcileStays();
   applyPeriodicBreath();
   chrome.alarms.create('miru-schedule', { periodInMinutes: 1 });
@@ -414,6 +434,7 @@ async function reloadSettings() {
   // 45m was an option before v2.2; the rhythm is half-hourly or hourly now.
   const iv = settings.periodicBreathInterval;
   if (iv !== 30 && iv !== 60) settings.periodicBreathInterval = iv > 30 ? 60 : 30;
+  settings.calmStayMax = stayCap();
 }
 
 // Periodic breath runs globally on its own rhythm — not tied to focus sessions.
@@ -487,6 +508,7 @@ chrome.storage.onChanged.addListener(async (c, area) => {
     await applyAllowRule();
     await applyNightGray();
     if (c.places) { await registerCalmScripts(); await reconcileStays(); }
+    else if (c.calmStayMax) await reconcileStays();
     // Only restart the periodic-breath timer when its own settings change, so
     // editing unrelated settings doesn't reset the interval.
     if (c.periodicBreathEnabled || c.periodicBreathInterval) applyPeriodicBreath();
@@ -709,7 +731,7 @@ function injectBreath(opts) {
       domain: opts.domain || '',
       askContinue: false,
       askStay: !!opts.askStay,
-      stayDefault: opts.stayDefault || 15,
+      stayMax: opts.stayMax || 60,
       backLabel: 'leave',
       onStay: function (minutes) { tell({ type: 'MIRU_STAY_AGAIN', minutes: minutes }); },
       onBack: function () {

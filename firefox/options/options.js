@@ -41,6 +41,7 @@ async function loadAll() {
   renderPlaces(s.places || []);
   renderPlaceSuggestions(s.places || []);
   renderAllowList(s.customExcludedDomains);
+  setStayMaxUI(clampStayMax(s.calmStayMax));
 
   // Breathing
   selectPill('breath-len-pills', 'len', s.breathDuration <= 15 ? 10 : 25);
@@ -62,6 +63,21 @@ async function loadAll() {
   chrome.storage.onChanged.addListener((c, area) => {
     if (area === 'local' && c.calmHealth) renderCalmHealth();
   });
+}
+
+// The longest stay: a plain number of minutes, held between one minute and
+// eight hours so the dial at the door always has a sane end. An emptied or
+// nonsense field falls back to the hour Miru starts with.
+function clampStayMax(value) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.min(480, Math.max(1, n)) : 60;
+}
+
+// The number shows in two places: the field itself, and the posture legend
+// above it, which quotes how far the dial will reach.
+function setStayMaxUI(minutes) {
+  document.getElementById('calm-stay-max').value = String(minutes);
+  document.getElementById('calm-max-note').textContent = String(minutes);
 }
 
 // A calm pack whose critical selectors stopped matching means the site moved
@@ -109,6 +125,15 @@ function bindControls() {
       flashSaved();
     }
     input.value = '';
+  });
+
+  // Longest stay: committed on change/blur rather than per keystroke, so a
+  // half-typed "12" on the way to "120" never becomes the ceiling.
+  document.getElementById('calm-stay-max').addEventListener('change', async (e) => {
+    const mins = clampStayMax(e.target.value);
+    setStayMaxUI(mins);
+    await saveSetting('calmStayMax', mins);
+    flashSaved();
   });
 
   document.getElementById('block-during-only').addEventListener('change', async (e) => {

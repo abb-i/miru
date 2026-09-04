@@ -48,8 +48,7 @@ Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 **c) Sitzungsdaten** — eine laufende Fokus-Sitzung, eine noch
 ausstehende Atem-Erinnerung, eine laufende Verweildauer in einer beruhigten
 Website (Domain, von Ihnen gewählte Länge, Endzeitpunkt und die Kennung des
-betreffenden Tabs) sowie die zuletzt gewählte Länge als Voreinstellung des
-Schiebereglers, ein Tageszähler für kurzzeitige Freigaben
+betreffenden Tabs), ein Tageszähler für kurzzeitige Freigaben
 blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk,
 falls das Beruhigen einer Website nicht mehr greift (nur der Domainname).
 Speicherort: `chrome.storage.local`.
@@ -220,9 +219,8 @@ storage (`chrome.storage`):
   maximum of 14 days, then deleted automatically.
 - **Session state** — a running focus session, a
   pending breath reminder, a running stay in a calmed site (domain, the length
-  you chose, its end time, and the id of the tab concerned) together with the
-  length you last chose as the slider's default, a daily counter for brief
-  unblocks of blocked sites ("stay five minutes"), and a technical note (domain
+  you chose, its end time, and the id of the tab concerned), a daily counter
+  for brief unblocks of blocked sites ("stay five minutes"), and a technical note (domain
   name only) if calming a site no longer takes effect. Stored locally until it
   expires or is resolved.
 

@@ -47,7 +47,15 @@
             <button type="submit" class="cta narrow">Add the place.</button>
           </form>
           <ul class="site-list place-list" id="place-list"></ul>
-          <div class="toggle-desc posture-legend"><strong>breathe</strong> asks one calm breath at the door · <strong>calm</strong> adds a length to the visit: after the breath you choose 1–60 minutes, the last of them in grayscale, then another breath asks again — and the feeds rest inside (YouTube &amp; Instagram) · <strong>block</strong> holds the door, with three five-minute stays a day</div>
+          <div class="toggle-desc posture-legend"><strong>breathe</strong> asks one calm breath at the door · <strong>calm</strong> adds a length to the visit: after the breath a dial asks how long, opening at zero and reaching <span id="calm-max-note">60</span> minutes, the last of them in grayscale, then another breath asks again — and the feeds rest inside (YouTube &amp; Instagram) · <strong>block</strong> holds the door, with three five-minute stays a day</div>
+          <div class="field">
+            <label for="calm-stay-max">Longest stay</label>
+            <div class="num-field">
+              <input type="number" id="calm-stay-max" min="1" max="480" step="1" inputmode="numeric" />
+              <span class="num-unit">minutes</span>
+            </div>
+            <div class="toggle-desc">How far the dial reaches when a calmed place asks how long — an hour unless you move it, up to eight. The dial itself always opens at zero, so the length is chosen every time rather than repeated.</div>
+          </div>
           <div class="empty-note calm-health" id="calm-health" hidden></div>
         </div>
 
@@ -239,7 +247,7 @@
             <ul>
               <li><strong>Einstellungen</strong> — Ihre Konfiguration (z.&nbsp;B. Ihre gewählten Orte und deren Haltung — Atmen, Beruhigen oder Blockieren —, Atemmuster, Nachtmodus-Zeiten, Design). Speicherort: chrome.storage.sync (siehe Ziffer&nbsp;4). Speicherdauer: bis zur Änderung oder Löschung durch Sie bzw. bis zur Deinstallation.</li>
               <li><strong>Nutzungszeiten</strong> — die je Website verbrachte Zeit (Domain und Sekunden), damit das Popup Ihnen Ihren Tag anzeigen kann. Speicherort: chrome.storage.local (nur dieses Gerät). Speicherdauer: maximal 14&nbsp;Tage, danach automatische Löschung.</li>
-              <li><strong>Sitzungsdaten</strong> — eine laufende Fokus-Sitzung, eine noch ausstehende Atem-Erinnerung, eine laufende Verweildauer in einer beruhigten Website (Domain, von Ihnen gewählte Länge, Endzeitpunkt und die Kennung des betreffenden Tabs) sowie die zuletzt gewählte Länge als Voreinstellung des Schiebereglers, ein Tageszähler für kurzzeitige Freigaben blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk, falls das Beruhigen einer Website nicht mehr greift (nur der Domainname). Speicherort: chrome.storage.local. Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.</li>
+              <li><strong>Sitzungsdaten</strong> — eine laufende Fokus-Sitzung, eine noch ausstehende Atem-Erinnerung, eine laufende Verweildauer in einer beruhigten Website (Domain, von Ihnen gewählte Länge, Endzeitpunkt und die Kennung des betreffenden Tabs), ein Tageszähler für kurzzeitige Freigaben blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk, falls das Beruhigen einer Website nicht mehr greift (nur der Domainname). Speicherort: chrome.storage.local. Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.</li>
             </ul>
             <p>Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO vorliegt, ist Rechtsgrundlage Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO (Bereitstellung der von Ihnen gewünschten Funktionen).</p>
 
@@ -302,7 +310,7 @@
             <ul>
               <li><strong>Settings</strong> — your configuration (your chosen places and their posture — breathe, calm, or block — breathing pattern, night hours, theme). Stored in chrome.storage.sync (see section&nbsp;4) until you change or delete them, or uninstall.</li>
               <li><strong>Usage times</strong> — time spent per site (domain and seconds) so the popup can show you your day. Stored in chrome.storage.local (this device only) for a maximum of 14&nbsp;days, then deleted automatically.</li>
-              <li><strong>Session state</strong> — a running focus session, a pending breath reminder, a running stay in a calmed site (domain, the length you chose, its end time, and the id of the tab concerned) together with the length you last chose as the slider's default, a daily counter for brief unblocks of blocked sites ("stay five minutes"), and a technical note (domain name only) if calming a site no longer takes effect. Stored locally until it expires or is resolved.</li>
+              <li><strong>Session state</strong> — a running focus session, a pending breath reminder, a running stay in a calmed site (domain, the length you chose, its end time, and the id of the tab concerned), a daily counter for brief unblocks of blocked sites ("stay five minutes"), and a technical note (domain name only) if calming a site no longer takes effect. Stored locally until it expires or is resolved.</li>
             </ul>
             <p>Where this constitutes processing of personal data under the GDPR, the legal basis is Art.&nbsp;6(1)(b) GDPR (providing the features you requested).</p>
 
