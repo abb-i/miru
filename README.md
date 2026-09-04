@@ -19,9 +19,10 @@ work.
   strips the page back to text: no thumbnails, no recommendations, no
   comments, no Shorts — while search and the video you came for keep working.
   On Instagram the feed, Reels and Explore rest while Stories, messages,
-  search and profiles keep working. Spend 15 minutes on a calmed site in a
-  day and it fades to grayscale for the rest of it. On sites without a calm
-  pack, calm simply breathes.
+  search and profiles keep working. After the breath you name how long you
+  mean to stay; the last minute of it turns grayscale, and when the time is up
+  another breath asks again. On sites without a calm pack, calm simply
+  breathes.
 - **Block** — a calm page, not a scolding one — and not a dead end: up to
   three times a day you can choose to stay five minutes, landing in the calm
   room where one exists, and the block returns when time is up.
@@ -30,10 +31,11 @@ Around the postures:
 
 - **Focus sessions** — begin 25 or 50 minutes from the popup; optionally,
   blocking holds only while a session runs.
-- **Periodic breath & time mirror** — a soft reminder to surface after a while,
-  and a gentle notice when you've been in one place a long time. Breaths appear
-  as a calm overlay on the page you're already on, at a natural pause (a tab
-  switch, a finished navigation) — not as another window cutting in.
+- **A gentle return** — a soft reminder to surface, on a steady rhythm, on
+  whatever site you have open. It appears as a calm overlay on the page you're
+  already on rather than another window cutting in, and it stands aside for two
+  things: something playing fullscreen, and a live microphone, camera or screen
+  share.
 - **Night mode** — during your night hours the web loses its color: everything
   still works, in quiet grayscale, easing you toward rest.
 
@@ -54,6 +56,11 @@ This repository is public so you don't have to take our word for it:
   (`utils/calm.js` — selectors as data, one file), injected only on the sites
   *you* set to calm. It reads no page content; its only writing is a local
   flag when a selector stops matching, so options can say a pack has gone stale.
+- So a breath never lands mid-call, a bundled script (`utils/media.js`) runs on
+  every site and wraps `getUserMedia` / `getDisplayMedia` to note *whether* a
+  microphone, camera or screen share is live — one yes/no marker, nothing more.
+  Miru never touches your microphone, camera or screen, asks for no such
+  permission, and reads no media or page content.
 
 Full details: [Privacy policy](PRIVACY.md) · [Impressum / Legal notice](IMPRESSUM.md)
 

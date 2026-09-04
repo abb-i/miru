@@ -1,6 +1,6 @@
 # Datenschutzerklärung für die Browser-Erweiterung „Miru"
 
-_Stand: 2. August 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
+_Stand: 4. September 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
 
 ## 1. Verantwortlicher
 
@@ -41,13 +41,15 @@ Speicherdauer: bis zur Änderung oder Löschung durch Sie bzw. bis zur
 Deinstallation.
 
 **b) Nutzungszeiten** — die je Website verbrachte Zeit (Domain und Sekunden),
-damit das Popup Ihnen Ihren Tag anzeigen kann und eine beruhigte Website in
-Graustufen übergeht, sobald Ihre dortige Tageszeit aufgebraucht ist.
+damit das Popup Ihnen Ihren Tag anzeigen kann.
 Speicherort: `chrome.storage.local` (nur dieses Gerät).
 Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
 **c) Sitzungsdaten** — eine laufende Fokus-Sitzung, eine noch
-ausstehende Atem-Erinnerung, ein Tageszähler für kurzzeitige Freigaben
+ausstehende Atem-Erinnerung, eine laufende Verweildauer in einer beruhigten
+Website (Domain, von Ihnen gewählte Länge, Endzeitpunkt und die Kennung des
+betreffenden Tabs) sowie die zuletzt gewählte Länge als Voreinstellung des
+Schiebereglers, ein Tageszähler für kurzzeitige Freigaben
 blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk,
 falls das Beruhigen einer Website nicht mehr greift (nur der Domainname).
 Speicherort: `chrome.storage.local`.
@@ -103,7 +105,7 @@ lit. f DSGVO (berechtigtes Interesse an der Beantwortung von Anfragen und der
 Verbesserung der Erweiterung). Die E-Mails werden gelöscht, sobald sie für
 diesen Zweck nicht mehr erforderlich sind.
 
-## 8. Berechtigungen der Erweiterung
+## 8. Berechtigungen und mitgelieferte Skripte
 
 Miru fordert Browser-Berechtigungen ausschließlich zur lokalen
 Funktionserbringung an:
@@ -118,15 +120,34 @@ Funktionserbringung an:
   Reels und Explore — durch mitgelieferte Stylesheets und ein kleines Skript
   auf den Websites, die Sie auf „Beruhigen" gestellt haben (derzeit YouTube
   und Instagram), sowie Anwenden eines mitgelieferten Graustufen-Stylesheets
-  während Ihrer Nachtstunden, kurzzeitig vor einer Atem-Erinnerung sowie auf einer beruhigten Website, sobald Ihre dortige Tageszeit aufgebraucht ist. Es wird
+  während Ihrer Nachtstunden sowie während der letzten Minute einer von Ihnen
+  gewählten Verweildauer in einer beruhigten Website. Es wird
   ausschließlich mitgelieferter Code der Erweiterung ausgeführt;
   Seiteninhalte werden weder gelesen noch ausgewertet noch übermittelt.
 - **tabs**: Erkennen der aktiven Website (Zeitanzeige), Umleiten bereits
   geöffneter blockierter Seiten.
 - **storage**: lokale Speicherung gemäß Ziffer 3.
 - **alarms**: zeitgesteuerte Funktionen (Sitzungsende, Nachtmodus,
-  Atem-Erinnerungen, Ende einer kurzzeitigen Freigabe).
+  Atem-Erinnerungen, Ende einer kurzzeitigen Freigabe, Ende einer
+  Verweildauer).
 - **idle**: Unterdrückung von Erinnerungen, während Sie abwesend sind.
+
+**Erkennung von Anrufen und Vollbildwiedergabe.** Damit die wiederkehrende
+Atem-Erinnerung Sie nicht mitten in einem Gespräch oder einer Aufnahme
+unterbricht, stellt die Erweiterung vor der Anzeige einer Erinnerung zweierlei
+fest: ob auf der aktiven Seite gerade etwas im Vollbild wiedergegeben wird, und
+ob irgendwo ein Mikrofon, eine Kamera oder eine Bildschirmfreigabe aktiv ist.
+Hierzu wird auf allen Websites (einschließlich eingebetteter Rahmen) ein
+mitgeliefertes Skript (`utils/media.js`) ausgeführt — technisch im
+Skript-Kontext der jeweiligen Website selbst, da die betreffenden
+Browser-Funktionen nur dort beobachtbar sind. Das Skript umschließt die
+Browser-Funktionen `getUserMedia` und `getDisplayMedia` und vermerkt
+ausschließlich, **ob** gerade eine solche Aufnahme läuft; die Erweiterung liest
+anschließend nur diesen einen Ja/Nein-Vermerk aus. Die Erweiterung greift dabei
+selbst nicht auf Mikrofon, Kamera oder Bildschirm zu und fordert hierfür keine
+entsprechende Berechtigung an. Bild-, Ton- oder sonstige Medieninhalte sowie
+Seiteninhalte werden weder gelesen noch gespeichert noch übermittelt; der
+Ja/Nein-Vermerk wird nicht dauerhaft gespeichert und verlässt Ihr Gerät nicht.
 
 ## 9. Ihre Rechte
 
@@ -163,7 +184,7 @@ Store bzw. addons.mozilla.org) angegebenen Adresse abrufbar.
 
 # Privacy Policy for the "Miru" browser extension (English translation)
 
-_Last updated: August 2, 2026. The German version above is the legally
+_Last updated: September 4, 2026. The German version above is the legally
 authoritative one._
 
 ## 1. Controller
@@ -195,14 +216,15 @@ storage (`chrome.storage`):
   `chrome.storage.sync` (see section 4) until you change or delete them, or
   uninstall.
 - **Usage times** — time spent per site (domain and seconds) so the popup can
-  show you your day, and so a calmed site can fade to grayscale once your daily
-  time there is spent. Stored in `chrome.storage.local` (this device only) for a
+  show you your day. Stored in `chrome.storage.local` (this device only) for a
   maximum of 14 days, then deleted automatically.
 - **Session state** — a running focus session, a
-  pending breath reminder, a daily counter for brief unblocks of blocked
-  sites ("stay five minutes"), and a technical note (domain name only) if
-  calming a site no longer takes effect. Stored locally until it expires or
-  is resolved.
+  pending breath reminder, a running stay in a calmed site (domain, the length
+  you chose, its end time, and the id of the tab concerned) together with the
+  length you last chose as the slider's default, a daily counter for brief
+  unblocks of blocked sites ("stay five minutes"), and a technical note (domain
+  name only) if calming a site no longer takes effect. Stored locally until it
+  expires or is resolved.
 
 Where this constitutes processing of personal data under the GDPR, the legal
 basis is Art. 6(1)(b) GDPR (providing the features you requested).
@@ -247,7 +269,7 @@ Art. 6(1)(f) GDPR (legitimate interest in answering inquiries and improving
 the extension). Emails are deleted once they are no longer needed for this
 purpose.
 
-## 8. Extension permissions
+## 8. Permissions and bundled scripts
 
 Miru requests browser permissions solely to work locally:
 **declarativeNetRequest** + access to all sites (redirecting navigations to
@@ -258,12 +280,27 @@ window, hiding distracting elements — on YouTube thumbnails, recommendations,
 comments and Shorts; on Instagram the feed, Reels and Explore — with bundled
 stylesheets and a small script on the sites you set to "calm" (currently
 YouTube and Instagram), and applying a bundled grayscale stylesheet during your night
-hours, briefly before a periodic breath, and to a calmed site once you've spent
-your daily time there; only bundled extension code runs,
+hours and during the last minute of a stay you chose in a calmed site; only
+bundled extension code runs,
 and page content is never read, evaluated, or transmitted), **tabs** (active site for
 the time display, redirecting already-open blocked tabs), **storage**
-(section 3), **alarms** (timed features, including ending a brief unblock),
-**idle** (no reminders while you're away).
+(section 3), **alarms** (timed features, including ending a brief unblock and
+ending a stay), **idle** (no reminders while you're away).
+
+**Detecting calls and fullscreen playback.** So that the recurring breath
+reminder does not interrupt you in the middle of a conversation or a recording,
+the extension establishes two things before showing a reminder: whether
+something is currently playing fullscreen on the active page, and whether a
+microphone, camera, or screen share is active anywhere. For this, a bundled
+script (`utils/media.js`) runs on all websites (including embedded frames) —
+technically within each website's own script context, because the browser
+functions concerned are only observable there. The script wraps the browser
+functions `getUserMedia` and `getDisplayMedia` and records only **whether** such
+a capture is currently running; the extension then reads nothing but this single
+yes/no marker. The extension itself does not access your microphone, camera, or
+screen, and requests no such permission. No image, audio, or other media
+content, and no page content, is read, stored, or transmitted; the yes/no marker
+is not stored permanently and never leaves your device.
 
 ## 9. Your rights
 
