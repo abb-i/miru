@@ -47,14 +47,15 @@
             <button type="submit" class="cta narrow">Add the place.</button>
           </form>
           <ul class="site-list place-list" id="place-list"></ul>
-          <div class="toggle-desc posture-legend"><strong>breathe</strong> asks one calm breath at the door · <strong>calm</strong> adds a length to the visit: after the breath a dial asks how long, opening at zero and reaching <span id="calm-max-note">60</span> minutes, the last of them in grayscale, then another breath asks again — and the feeds rest inside (YouTube &amp; Instagram) · <strong>block</strong> holds the door, with three five-minute stays a day</div>
+          <div class="toggle-desc posture-legend"><strong>breathe</strong> a breath at the door · <strong>calm</strong> the breath, then a length you name — feeds rest inside (YouTube &amp; Instagram) · <strong>block</strong> holds the door, with three five-minute stays a day</div>
           <div class="field">
             <label for="calm-stay-max">Longest stay</label>
             <div class="num-field">
-              <input type="number" id="calm-stay-max" min="1" max="480" step="1" inputmode="numeric" />
+              <input type="text" id="calm-stay-max" inputmode="numeric" autocomplete="off"
+                     spellcheck="false" maxlength="3" aria-describedby="calm-stay-max-note" />
               <span class="num-unit">minutes</span>
             </div>
-            <div class="toggle-desc">How far the dial reaches when a calmed place asks how long — an hour unless you move it, up to eight. The dial itself always opens at zero, so the length is chosen every time rather than repeated.</div>
+            <div class="toggle-desc" id="calm-stay-max-note">How far the dial reaches. It always starts at zero.</div>
           </div>
           <div class="empty-note calm-health" id="calm-health" hidden></div>
         </div>

@@ -41,7 +41,7 @@ async function loadAll() {
   renderPlaces(s.places || []);
   renderPlaceSuggestions(s.places || []);
   renderAllowList(s.customExcludedDomains);
-  setStayMaxUI(clampStayMax(s.calmStayMax));
+  setStayMaxUI(readStayMax(s.calmStayMax) || 60);
 
   // Breathing
   selectPill('breath-len-pills', 'len', s.breathDuration <= 15 ? 10 : 25);
@@ -65,19 +65,22 @@ async function loadAll() {
   });
 }
 
-// The longest stay: a plain number of minutes, held between one minute and
-// eight hours so the dial at the door always has a sane end. An emptied or
-// nonsense field falls back to the hour Miru starts with.
-function clampStayMax(value) {
-  const n = Math.round(Number(value));
-  return Number.isFinite(n) ? Math.min(480, Math.max(1, n)) : 60;
+// The longest stay is a plain text field — a number input grows spinner arrows
+// that sit badly against the rest of the page — so the digits are checked here
+// instead. Whole minutes only, one minute to eight hours; anything else is not
+// a length, and the field simply returns to the value already saved.
+let stayMaxSaved = 60;
+
+function readStayMax(raw) {
+  const v = String(raw == null ? '' : raw).trim();
+  if (!/^\d{1,3}$/.test(v)) return null;
+  const n = Number(v);
+  return (n >= 1 && n <= 480) ? n : null;
 }
 
-// The number shows in two places: the field itself, and the posture legend
-// above it, which quotes how far the dial will reach.
 function setStayMaxUI(minutes) {
+  stayMaxSaved = minutes;
   document.getElementById('calm-stay-max').value = String(minutes);
-  document.getElementById('calm-max-note').textContent = String(minutes);
 }
 
 // A calm pack whose critical selectors stopped matching means the site moved
@@ -127,10 +130,17 @@ function bindControls() {
     input.value = '';
   });
 
-  // Longest stay: committed on change/blur rather than per keystroke, so a
-  // half-typed "12" on the way to "120" never becomes the ceiling.
-  document.getElementById('calm-stay-max').addEventListener('change', async (e) => {
-    const mins = clampStayMax(e.target.value);
+  // Longest stay: digits only while typing, and committed on change/blur rather
+  // than per keystroke, so a half-typed "12" on the way to "120" never becomes
+  // the ceiling. A field left empty or out of range reverts to what was saved.
+  const stayMaxInput = document.getElementById('calm-stay-max');
+  stayMaxInput.addEventListener('input', (e) => {
+    const digits = e.target.value.replace(/\D/g, '');
+    if (digits !== e.target.value) e.target.value = digits;
+  });
+  stayMaxInput.addEventListener('change', async (e) => {
+    const mins = readStayMax(e.target.value);
+    if (mins === null) { e.target.value = String(stayMaxSaved); return; }
     setStayMaxUI(mins);
     await saveSetting('calmStayMax', mins);
     flashSaved();
