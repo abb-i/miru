@@ -289,6 +289,7 @@ async function startStay(tabId, domain, minutes) {
   stays[tabId] = { domain, endsAt, minutes: mins };
   stayTabs.add(tabId);
   await setStays(stays);
+  await recordNamedStay(domain, mins);
   await ungrayStay(tabId);
   chrome.alarms.create(stayAlarm(tabId), { when: endsAt });
   // A one-minute stay is *all* last minute — an alarm already due fires at once.
@@ -342,7 +343,7 @@ async function expireStay(tabId) {
   await injectBreathInto(tabId, {
     theme: resolveTheme(), pool: 'periodic', duration: settings.breathDuration || 10,
     pattern: settings.breathPattern, domain: st.domain,
-    askStay: true, stayMax: stayCap()
+    askStay: true, stayMax: stayCap(), stayNote: await stayNoteFor(st.domain)
   });
 }
 
@@ -732,6 +733,7 @@ function injectBreath(opts) {
       askContinue: false,
       askStay: !!opts.askStay,
       stayMax: opts.stayMax || 60,
+      stayNote: opts.stayNote || '',
       backLabel: 'leave',
       onStay: function (minutes) { tell({ type: 'MIRU_STAY_AGAIN', minutes: minutes }); },
       onBack: function () {
@@ -946,6 +948,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       case 'MIRU_GET_STATE': {
         sendResponse({ session: await getActiveSession() });
+        break;
+      }
+      // Everything the "Looking back" section shows, assembled in one place:
+      // the day keys, the minutes named per place, and the time each took.
+      case 'MIRU_GET_LOOKBACK': {
+        await recordElapsed();               // flush the visit in progress
+        const [{ usage = {} }, log] = await Promise.all([
+          chrome.storage.local.get('usage'), getStayLog()
+        ]);
+        sendResponse({ usage, stayLog: log, today: todayKey(), calm: placeDomains('calm') });
         break;
       }
       case 'MIRU_GET_USAGE': {

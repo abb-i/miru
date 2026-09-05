@@ -37,6 +37,11 @@
   });
   const askStay = !!target && !!place && place.posture === 'calm';
 
+  // Returning to a place is the one thing a per-tab clock cannot see, so the
+  // door carries the day's arithmetic when there is any — and says nothing on
+  // a first arrival. Keyed the same way the worker keys its records.
+  const stayNote = askStay ? await stayNoteFor(getRootDomain(target)) : '';
+
   const bg = resolved === 'light' ? '#f7f5ef' : '#16160f';
   document.documentElement.style.background = bg;
   document.body.style.background = bg;
@@ -74,6 +79,7 @@
     askContinue: !!target && !askStay,   // navigation breath ends with continue / go back
     askStay,                             // a calmed place ends with the stay slider
     stayMax: stored.calmStayMax,
+    stayNote,
     onStay: (minutes) => stayThen(minutes),
     onContinue: () => { if (target) goToTarget(); else closeSelf(); },
     onDone: () => { if (target) goToTarget(); else closeSelf(); },

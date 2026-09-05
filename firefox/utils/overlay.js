@@ -120,6 +120,8 @@
   border:none;cursor:pointer;}
 .miru-overlay .miru-ticks{display:flex;justify-content:space-between;width:100%;font-size:11px;
   letter-spacing:.04em;color:var(--muted);opacity:.55;}
+.miru-overlay .miru-stay-note{font-size:13px;line-height:1.5;color:var(--muted);text-align:center;
+  max-width:min(360px,80vw);margin:0 auto;}
 .miru-continue{font-family:'Cormorant Garamond',serif;font-weight:400;font-size:19px;color:#f7f5ef;
   background:var(--green);border:none;border-radius:8px;padding:11px 28px;cursor:pointer;transition:background .2s ease;}
 .miru-continue:hover{background:var(--green-dark);}
@@ -205,6 +207,10 @@
     // every single time, and 'stay' stays inert until you have moved it.
     const askStay = !!opts.askStay;
     const stayMax = Math.min(480, Math.max(1, Math.round(opts.stayMax || 60)));
+    // A line of plain arithmetic on the day so far, when there is one. It sits
+    // above the dial so it is read while the length is being chosen, and it
+    // carries no verdict — the numbers are the person's own.
+    const stayNote = askStay ? String(opts.stayNote || '') : '';
     const cycleMs = pattern.phases.reduce((a, p) => a + p.ms, 0);
     const totalCycles = Math.max(1, Math.round(((opts.duration || 15) * 1000) / cycleMs)) + (opts.extraCycles || 0);
 
@@ -227,6 +233,7 @@
         <div class="miru-q">${askStay
           ? (domain ? `How long on <b>${domain}</b>?` : 'How long?')
           : (domain ? `Continue to <b>${domain}</b>?` : 'Continue?')}</div>
+        ${stayNote ? `<div class="miru-stay-note">${stayNote}</div>` : ''}
         ${askStay ? `
         <div class="miru-stay">
           <div class="miru-stay-val"><b>0</b> minutes</div>

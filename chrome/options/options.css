@@ -158,6 +158,49 @@ input::placeholder { color: var(--muted); opacity: 0.8; }
 input:focus { border-color: var(--green-primary); }
 input[type="range"] { width: 100%; accent-color: var(--green-primary); }
 
+/* Research — a finding, its source, and what Miru does about it. */
+.research-list { gap: 0; }
+.research-entry { display: flex; flex-direction: column; gap: 9px; padding: 20px 0; border-bottom: 0.5px solid var(--border); }
+.research-entry:first-child { padding-top: 0; }
+.research-entry:last-child { padding-bottom: 0; border-bottom: none; }
+.research-entry h3 { font-family: 'Cormorant Garamond', Georgia, serif; font-weight: 400; font-size: 20px; line-height: 1.25; }
+.research-entry p { font-size: 13.5px; line-height: 1.65; color: var(--muted); }
+.research-meta { font-size: 12px !important; opacity: 0.85; }
+.research-does { color: var(--text) !important; }
+
+/* Looking back — two numbers side by side, and never a red one. The bar is
+   comparison, not judgement: the named length is the pale track, the time
+   spent is the fill, and a fill past its track simply keeps going. */
+.lookback-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.lookback-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.lookback-site { font-size: 14px; font-weight: 400; }
+.lookback-figures {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.lookback-figures b { font-weight: 500; color: var(--text); }
+.lookback-track {
+  position: relative;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--surface);
+  margin-top: 7px;
+  overflow: hidden;
+}
+.lookback-fill { position: absolute; inset: 0 auto 0 0; border-radius: 3px; background: var(--green-primary); }
+.lookback-fill.over { background: var(--green-deep); }
+.lookback-named-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 1px;
+  background: var(--muted);
+  opacity: 0.75;
+}
+.lookback-actions { display: flex; flex-wrap: wrap; gap: 18px; }
+
 /* A number that keeps its unit beside it instead of stretching the row. */
 .num-field { display: flex; align-items: center; gap: 10px; }
 .num-field input { width: 92px; }

@@ -20,10 +20,12 @@
       </div>
       <nav class="nav">
         <button class="nav-item active" data-target="sec-places">Places</button>
+        <button class="nav-item" data-target="sec-lookback">Looking back</button>
         <button class="nav-item" data-target="sec-breath">Breathing</button>
         <button class="nav-item" data-target="sec-night">Night</button>
         <button class="nav-item" data-target="sec-appearance">Appearance</button>
         <button class="nav-item" data-target="sec-about">About</button>
+        <button class="nav-item" data-target="sec-research">Research</button>
         <button class="nav-item" data-target="sec-legal">Legal</button>
       </nav>
       <div class="saved-note" id="saved-note">Everything is saved.</div>
@@ -80,6 +82,33 @@
               <input type="checkbox" id="block-during-only" />
               <span class="slider"></span>
             </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Looking back -->
+      <section class="section" id="sec-lookback">
+        <h2 class="heading">Looking back</h2>
+        <p class="sub">The last seven days, kept on this device and nowhere else. Nothing here is a score.</p>
+
+        <div class="card">
+          <div class="toggle-title">Named, and spent</div>
+          <div class="toggle-desc">What you asked for at the door of a calmed place, beside what the day actually took. Both numbers are yours; Miru only does the arithmetic.</div>
+          <ul class="lookback-list" id="lookback-named"></ul>
+        </div>
+
+        <div class="card">
+          <div class="toggle-title">Where the time went</div>
+          <div class="toggle-desc">Every site, calmed or not, over the same seven days.</div>
+          <ul class="lookback-list" id="lookback-time"></ul>
+        </div>
+
+        <div class="card">
+          <div class="toggle-title">Anything to change?</div>
+          <div class="toggle-desc">Looking is only half of it. The postures, the longest stay and the list itself all live one click away.</div>
+          <div class="lookback-actions">
+            <button class="text-link" data-goto="sec-places">Tend the places →</button>
+            <button class="text-link" data-goto="sec-breath">Change the breath →</button>
           </div>
         </div>
       </section>
@@ -209,6 +238,72 @@
         </div>
       </section>
 
+      <!-- Research -->
+      <section class="section" id="sec-research">
+        <h2 class="heading">Research</h2>
+        <p class="sub">Miru makes claims about attention. Here is what they rest on, so you can check them rather than take them.</p>
+
+        <div class="card">
+          <div class="toggle-desc">Every design decision below was made against published work, not intuition. Where the evidence said something uncomfortable — that the part people most want is the part that changes them least — Miru followed the evidence.</div>
+        </div>
+
+        <div class="card research-list">
+          <div class="research-entry">
+            <h3>A dial at the door works, and the effect is not small</h3>
+            <p>In a six-week controlled study, 58 students used a prompt that asked their purpose on arrival and reminded them of it a few minutes in. Daily time on the site fell from 27 minutes to 15, daily visits from 29 to 11, scrolling by 42% — and some of it held after the tool was removed, because people had built the habit of asking themselves what they came for.</p>
+            <p class="research-meta">Lyngs et al., <em>“I Just Want to Hack Myself to Not Get Distracted”</em>, CHI 2020 · <a class="text-link" href="https://arxiv.org/pdf/2001.04180" target="_blank" rel="noopener">read it</a></p>
+            <p class="research-does"><strong>In Miru:</strong> the stay dial. You name a length at the door of a calmed place, and it opens at zero every time so the length is chosen rather than repeated.</p>
+          </div>
+
+          <div class="research-entry">
+            <h3>The same study shows how such a prompt becomes hated</h3>
+            <p>Its banner grew larger until dismissed, it treated a twenty-second visit like an hour of scrolling, and it demanded a justification. Participants described clicking out of it and staying on the site out of spite. The author's own advice: longer intervals, less invasive presentation, and framing that supports the person's goals instead of imposing someone else's.</p>
+            <p class="research-meta">Lyngs et al., CHI 2020, participant interviews</p>
+            <p class="research-does"><strong>In Miru:</strong> nothing grows, nothing repeats within a visit, and nothing asks you to justify yourself. The dial offers two real doors — stay, or leave.</p>
+          </div>
+
+          <div class="research-entry">
+            <h3>Statistics alone raise awareness and rarely change behaviour</h3>
+            <p>Screen-time tracking reliably improves self-awareness but seldom reduces use. People prefer informational tracking to blocking or nudging while rating it less effective — most strongly among those most dependent on the site. Facebook's own time-monitoring features showed no association with lower depression, anxiety or stress.</p>
+            <p class="research-meta">Journal of the Association for Consumer Research, 2021 · <a class="text-link" href="https://www.journals.uchicago.edu/doi/abs/10.1086/714365" target="_blank" rel="noopener">read it</a> — and JMIR, 2022 · <a class="text-link" href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9468917/" target="_blank" rel="noopener">read it</a></p>
+            <p class="research-does"><strong>In Miru:</strong> “Looking back” exists, but it is not the feature. The dial is. The record is there to be consulted, not to do the work on its own.</p>
+          </div>
+
+          <div class="research-entry">
+            <h3>A repeated warning stops being seen at the second showing</h3>
+            <p>Brain imaging shows a sharp drop in visual processing after only the second exposure to a warning, falling further each time. Warnings whose appearance varies resisted this: over a three-week field experiment, adherence to fixed warnings decayed while the varying ones held.</p>
+            <p class="research-meta">Anderson et al., CHI 2015 · <a class="text-link" href="https://dl.acm.org/doi/10.1145/2702123.2702322" target="_blank" rel="noopener">read it</a> — and Vance et al., MIS Quarterly 2018</p>
+            <p class="research-does"><strong>In Miru:</strong> the breath rotates its words, and the line above the dial changes its phrasing each time it appears.</p>
+          </div>
+
+          <div class="research-entry">
+            <h3>Being shown the gap makes people defensive</h3>
+            <p>One study is named after a participant: <em>“In my defense, only three hours on Instagram.”</em> Confronted with the distance between what they assumed and what they did, people build a case rather than absorb it. Framing that distance as a failure produces guilt, which undermines the wellbeing the tool exists to serve; framing it as ordinary and informative does not.</p>
+            <p class="research-meta">Designing Toward Digital Self-Awareness and Wellbeing, 2025 · <a class="text-link" href="https://arxiv.org/pdf/2509.21860" target="_blank" rel="noopener">read it</a></p>
+            <p class="research-does"><strong>In Miru:</strong> no red, no target missed, no word like “productive”. Looking back sets two numbers beside each other and says nothing about them.</p>
+          </div>
+
+          <div class="research-entry">
+            <h3>A prompt that passes judgement produces the opposite behaviour</h3>
+            <p>When people feel their freedom is being constrained, they act to restore it — sometimes by deliberately doing the thing being discouraged. Autonomy-supportive wording, which offers a choice rather than a verdict, avoids this; moralising wording invites it.</p>
+            <p class="research-meta">Reactance research, Brehm onward · <a class="text-link" href="https://www.sciencedirect.com/science/article/pii/S2214804323000733" target="_blank" rel="noopener">read a recent test</a></p>
+            <p class="research-does"><strong>In Miru:</strong> the line above the dial states your own numbers and stops. There is no question, no adjective and no threshold that Miru chose for you.</p>
+          </div>
+
+          <div class="research-entry">
+            <h3>Most tools of this kind never reach the point of doing anything</h3>
+            <p>The stage model of personal informatics — preparation, collection, integration, reflection, action — finds that barriers cascade forward, and that most systems stop at reflection. Separately, plans in an if-then form have a medium-to-large effect on actually getting started, where an intention on its own routinely fails.</p>
+            <p class="research-meta">Li, Dey &amp; Forlizzi, CHI 2010 · <a class="text-link" href="https://dl.acm.org/doi/10.1145/1753326.1753409" target="_blank" rel="noopener">read it</a> — and the if-then planning literature · <a class="text-link" href="https://www.tandfonline.com/doi/full/10.1080/10463283.2020.1808936" target="_blank" rel="noopener">read it</a></p>
+            <p class="research-does"><strong>In Miru:</strong> every panel in Looking back ends in a door back to the settings that change something.</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toggle-title">What Miru cannot tell you</div>
+          <div class="toggle-desc">Miru collects nothing and sends nothing, which means it has no idea whether any of this works for you in particular. There is no experiment running here, no cohort, and no measurement of your response. The evidence above is about people in general; you are the only one who can judge the rest.</div>
+        </div>
+      </section>
+
       <!-- Legal -->
       <section class="section" id="sec-legal">
         <h2 class="heading">Legal</h2>
@@ -233,7 +328,7 @@
 
           <div class="card legal-card">
             <h3>Datenschutzerklärung</h3>
-            <p class="legal-date">Stand: 4. September 2026</p>
+            <p class="legal-date">Stand: 5. September 2026</p>
 
             <h4>1. Verantwortlicher</h4>
             <p>Verantwortlicher im Sinne der Datenschutz-Grundverordnung (DSGVO):<br>
@@ -247,8 +342,9 @@
             <p>Zur Bereitstellung ihrer Funktionen speichert die Erweiterung folgende Daten im Speicher Ihres Browsers (chrome.storage):</p>
             <ul>
               <li><strong>Einstellungen</strong> — Ihre Konfiguration (z.&nbsp;B. Ihre gewählten Orte und deren Haltung — Atmen, Beruhigen oder Blockieren —, Atemmuster, Nachtmodus-Zeiten, Design). Speicherort: chrome.storage.sync (siehe Ziffer&nbsp;4). Speicherdauer: bis zur Änderung oder Löschung durch Sie bzw. bis zur Deinstallation.</li>
-              <li><strong>Nutzungszeiten</strong> — die je Website verbrachte Zeit (Domain und Sekunden), damit das Popup Ihnen Ihren Tag anzeigen kann. Speicherort: chrome.storage.local (nur dieses Gerät). Speicherdauer: maximal 14&nbsp;Tage, danach automatische Löschung.</li>
+              <li><strong>Nutzungszeiten</strong> — die je Website verbrachte Zeit (Domain und Sekunden), damit das Popup Ihnen Ihren Tag und der Bereich „Looking back" die vergangenen sieben Tage anzeigen kann. Speicherort: chrome.storage.local (nur dieses Gerät). Speicherdauer: maximal 14&nbsp;Tage, danach automatische Löschung.</li>
               <li><strong>Sitzungsdaten</strong> — eine laufende Fokus-Sitzung, eine noch ausstehende Atem-Erinnerung, eine laufende Verweildauer in einer beruhigten Website (Domain, von Ihnen gewählte Länge, Endzeitpunkt und die Kennung des betreffenden Tabs), ein Tageszähler für kurzzeitige Freigaben blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk, falls das Beruhigen einer Website nicht mehr greift (nur der Domainname). Speicherort: chrome.storage.local. Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.</li>
+              <li><strong>Genannte Längen</strong> — die an der Tür einer beruhigten Website von Ihnen genannten Verweildauern: je Tag und Website die Summe der genannten Minuten und wie oft Sie dort eine Länge genannt haben. Daraus entsteht der Bereich „Looking back"; eine darüber hinausgehende Messung findet nicht statt. Speicherort: chrome.storage.local (nur dieses Gerät). Speicherdauer: maximal 14&nbsp;Tage, danach automatische Löschung.</li>
             </ul>
             <p>Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO vorliegt, ist Rechtsgrundlage Art.&nbsp;6 Abs.&nbsp;1 lit.&nbsp;b DSGVO (Bereitstellung der von Ihnen gewünschten Funktionen).</p>
 
@@ -297,7 +393,7 @@
 
           <div class="card legal-card">
             <h3>Privacy Policy</h3>
-            <p class="legal-date">Last updated: September 4, 2026. The German version is the legally authoritative one.</p>
+            <p class="legal-date">Last updated: September 5, 2026. The German version is the legally authoritative one.</p>
 
             <h4>1. Controller</h4>
             <p>Controller within the meaning of the EU General Data Protection Regulation (GDPR):<br>
@@ -310,8 +406,9 @@
             <h4>3. Locally stored data</h4>
             <ul>
               <li><strong>Settings</strong> — your configuration (your chosen places and their posture — breathe, calm, or block — breathing pattern, night hours, theme). Stored in chrome.storage.sync (see section&nbsp;4) until you change or delete them, or uninstall.</li>
-              <li><strong>Usage times</strong> — time spent per site (domain and seconds) so the popup can show you your day. Stored in chrome.storage.local (this device only) for a maximum of 14&nbsp;days, then deleted automatically.</li>
+              <li><strong>Usage times</strong> — time spent per site (domain and seconds) so the popup can show you your day and the "Looking back" section the past seven days. Stored in chrome.storage.local (this device only) for a maximum of 14&nbsp;days, then deleted automatically.</li>
               <li><strong>Session state</strong> — a running focus session, a pending breath reminder, a running stay in a calmed site (domain, the length you chose, its end time, and the id of the tab concerned), a daily counter for brief unblocks of blocked sites ("stay five minutes"), and a technical note (domain name only) if calming a site no longer takes effect. Stored locally until it expires or is resolved.</li>
+              <li><strong>Named lengths</strong> — the stays you name at the door of a calmed site: per day and site, the total minutes named and how many times you named one. This is what the "Looking back" section is built from; nothing further is measured. Stored in chrome.storage.local (this device only) for a maximum of 14&nbsp;days, then deleted automatically.</li>
             </ul>
             <p>Where this constitutes processing of personal data under the GDPR, the legal basis is Art.&nbsp;6(1)(b) GDPR (providing the features you requested).</p>
 

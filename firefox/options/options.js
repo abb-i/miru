@@ -58,6 +58,8 @@ async function loadAll() {
   // Appearance
   selectPill('theme-pills', 'theme', s.theme);
 
+  await renderLookback();
+
   // Calm health: surface selector breakage reported by utils/calm.js.
   await renderCalmHealth();
   chrome.storage.onChanged.addListener((c, area) => {
@@ -81,6 +83,127 @@ function readStayMax(raw) {
 function setStayMaxUI(minutes) {
   stayMaxSaved = minutes;
   document.getElementById('calm-stay-max').value = String(minutes);
+}
+
+// ---- Looking back -----------------------------------------------------------
+// Seven days, assembled by the worker so the arithmetic lives in one place.
+// Two panels, in this order on purpose: what you named against what it took
+// (which only Miru can show, because only Miru asked), and then the ordinary
+// totals. Neither is framed as a target met or missed.
+const LOOKBACK_WINDOW = 7;
+
+function lastDays(todayKey, n) {
+  const out = [];
+  const d = new Date(todayKey + 'T12:00:00');
+  for (let i = 0; i < n; i++) {
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    d.setDate(d.getDate() - 1);
+  }
+  return out;
+}
+
+function fmtMins(mins) {
+  if (mins >= 60) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${mins}m`;
+}
+
+function emptyNote(text) {
+  const note = document.createElement('div');
+  note.className = 'empty-note';
+  note.textContent = text;
+  return note;
+}
+
+async function renderLookback() {
+  const res = await chrome.runtime.sendMessage({ type: 'MIRU_GET_LOOKBACK' }).catch(() => null);
+  const named = document.getElementById('lookback-named');
+  const time = document.getElementById('lookback-time');
+  named.innerHTML = '';
+  time.innerHTML = '';
+  if (!res) {
+    named.appendChild(emptyNote('Nothing to show yet.'));
+    time.appendChild(emptyNote('Nothing to show yet.'));
+    return;
+  }
+
+  const days = lastDays(res.today, LOOKBACK_WINDOW);
+  const spent = {};       // domain -> minutes
+  const asked = {};       // domain -> { named, visits }
+  days.forEach((key) => {
+    Object.entries((res.usage || {})[key] || {}).forEach(([dom, secs]) => {
+      spent[dom] = (spent[dom] || 0) + Math.round(secs / 60);
+    });
+    Object.entries((res.stayLog || {})[key] || {}).forEach(([dom, e]) => {
+      const a = asked[dom] || (asked[dom] = { named: 0, visits: 0 });
+      a.named += e.named || 0;
+      a.visits += e.visits || 0;
+    });
+  });
+
+  // Panel one: the places you named a length for.
+  const namedRows = Object.entries(asked)
+    .filter(([, a]) => a.named > 0)
+    .sort((a, b) => b[1].named - a[1].named);
+  if (!namedRows.length) {
+    named.appendChild(emptyNote(
+      'No lengths named yet. Set a place to calm, and the dial at its door starts the record.'));
+  } else {
+    namedRows.forEach(([dom, a]) => {
+      const took = spent[dom] || 0;
+      named.appendChild(lookbackRow(dom,
+        `<b>${fmtMins(a.named)}</b> named · <b>${fmtMins(took)}</b> spent · ${a.visits} ${a.visits === 1 ? 'visit' : 'visits'}`,
+        a.named, took));
+    });
+  }
+
+  // Panel two: the plain totals.
+  const timeRows = Object.entries(spent).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!timeRows.length) {
+    time.appendChild(emptyNote('No time tended in the last seven days.'));
+  } else {
+    const max = timeRows[0][1] || 1;
+    timeRows.forEach(([dom, mins]) => {
+      time.appendChild(lookbackRow(dom, `<b>${fmtMins(mins)}</b>`, 0, mins, max));
+    });
+  }
+}
+
+// One row: the place, its figures, and a bar. When a length was named, the
+// bar's track is that length and a faint mark sits where it ends — so running
+// past it is visible without being coloured as a failure.
+function lookbackRow(domain, figuresHTML, namedMins, spentMins, scaleTo) {
+  const li = document.createElement('li');
+
+  const row = document.createElement('div');
+  row.className = 'lookback-row';
+  const site = document.createElement('span');
+  site.className = 'lookback-site';
+  site.textContent = domain;
+  const figures = document.createElement('span');
+  figures.className = 'lookback-figures';
+  figures.innerHTML = figuresHTML;      // built here from integers only
+  row.append(site, figures);
+
+  const scale = scaleTo || Math.max(namedMins, spentMins) || 1;
+  const track = document.createElement('div');
+  track.className = 'lookback-track';
+  const fill = document.createElement('div');
+  fill.className = 'lookback-fill' + (namedMins && spentMins > namedMins ? ' over' : '');
+  fill.style.width = Math.max(2, Math.min(100, Math.round((spentMins / scale) * 100))) + '%';
+  track.appendChild(fill);
+  if (namedMins > 0 && namedMins < scale) {
+    const mark = document.createElement('div');
+    mark.className = 'lookback-named-mark';
+    mark.style.left = Math.round((namedMins / scale) * 100) + '%';
+    track.appendChild(mark);
+  }
+
+  li.append(row, track);
+  return li;
 }
 
 // A calm pack whose critical selectors stopped matching means the site moved
@@ -175,6 +298,13 @@ function bindControls() {
   document.getElementById('night-end').addEventListener('change', async (e) => {
     await saveSetting('nightModeEnd', e.target.value); flashSaved();
   });
+
+  // Looking back: the doors out of it, into the settings that change things.
+  document.querySelectorAll('[data-goto]').forEach((b) =>
+    b.addEventListener('click', () => {
+      document.querySelector(`.nav-item[data-target="${b.dataset.goto}"]`).click();
+      window.scrollTo(0, 0);
+    }));
 
   // Appearance
   bindPills('theme-pills', 'theme', async (val) => {

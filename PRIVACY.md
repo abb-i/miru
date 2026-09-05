@@ -1,6 +1,6 @@
 # Datenschutzerklärung für die Browser-Erweiterung „Miru"
 
-_Stand: 4. September 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
+_Stand: 5. September 2026 — die deutsche Fassung ist maßgeblich; an English translation follows below._
 
 ## 1. Verantwortlicher
 
@@ -41,7 +41,8 @@ Speicherdauer: bis zur Änderung oder Löschung durch Sie bzw. bis zur
 Deinstallation.
 
 **b) Nutzungszeiten** — die je Website verbrachte Zeit (Domain und Sekunden),
-damit das Popup Ihnen Ihren Tag anzeigen kann.
+damit das Popup Ihnen Ihren Tag und der Bereich „Looking back" die vergangenen
+sieben Tage anzeigen kann.
 Speicherort: `chrome.storage.local` (nur dieses Gerät).
 Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
@@ -53,6 +54,13 @@ blockierter Seiten („fünf Minuten bleiben") sowie ein technischer Vermerk,
 falls das Beruhigen einer Website nicht mehr greift (nur der Domainname).
 Speicherort: `chrome.storage.local`.
 Speicherdauer: bis zum jeweiligen Ablauf bzw. Tagesende bzw. bis zur Behebung.
+
+**d) Genannte Längen** — die an der Tür einer beruhigten Website von Ihnen
+genannten Verweildauern: je Tag und Website die Summe der genannten Minuten und
+wie oft Sie dort eine Länge genannt haben. Daraus entsteht der Bereich
+„Looking back"; eine darüber hinausgehende Messung findet nicht statt.
+Speicherort: `chrome.storage.local` (nur dieses Gerät).
+Speicherdauer: maximal 14 Tage, danach automatische Löschung.
 
 Soweit hierbei eine Verarbeitung personenbezogener Daten im Sinne der DSGVO
 vorliegt, ist Rechtsgrundlage Art. 6 Abs. 1 lit. b DSGVO (Bereitstellung der
@@ -183,7 +191,7 @@ Store bzw. addons.mozilla.org) angegebenen Adresse abrufbar.
 
 # Privacy Policy for the "Miru" browser extension (English translation)
 
-_Last updated: September 4, 2026. The German version above is the legally
+_Last updated: September 5, 2026. The German version above is the legally
 authoritative one._
 
 ## 1. Controller
@@ -215,8 +223,14 @@ storage (`chrome.storage`):
   `chrome.storage.sync` (see section 4) until you change or delete them, or
   uninstall.
 - **Usage times** — time spent per site (domain and seconds) so the popup can
-  show you your day. Stored in `chrome.storage.local` (this device only) for a
-  maximum of 14 days, then deleted automatically.
+  show you your day and the "Looking back" section the past seven days. Stored
+  in `chrome.storage.local` (this device only) for a maximum of 14 days, then
+  deleted automatically.
+- **Named lengths** — the stays you name at the door of a calmed site: per day
+  and site, the total minutes named and how many times you named one. This is
+  what the "Looking back" section is built from; nothing further is measured.
+  Stored in `chrome.storage.local` (this device only) for a maximum of 14 days,
+  then deleted automatically.
 - **Session state** — a running focus session, a
   pending breath reminder, a running stay in a calmed site (domain, the length
   you chose, its end time, and the id of the tab concerned), a daily counter
