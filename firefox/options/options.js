@@ -144,6 +144,8 @@ async function renderLookback() {
     });
   });
 
+  renderWeek(days, spent, res.usage || {});
+
   // Panel one: the places you named a length for.
   const namedRows = Object.entries(asked)
     .filter(([, a]) => a.named > 0)
@@ -172,9 +174,92 @@ async function renderLookback() {
   }
 }
 
-// One row: the place, its figures, and a bar. When a length was named, the
-// bar's track is that length and a faint mark sits where it ends — so running
-// past it is visible without being coloured as a failure.
+// The week at a glance: how much, where it went, and on which days.
+// Five places at most carry a hue of their own; everything past that folds into
+// one "other" band rather than inventing a sixth colour nobody could tell apart.
+const WEEK_HUES = ['var(--cat-1)', 'var(--cat-2)', 'var(--cat-3)', 'var(--cat-4)', 'var(--cat-5)'];
+const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+function renderWeek(days, spent, usage) {
+  const bar = document.getElementById('week-bar');
+  const legend = document.getElementById('week-legend');
+  const cols = document.getElementById('week-days');
+  bar.innerHTML = ''; legend.innerHTML = ''; cols.innerHTML = '';
+
+  const ranked = Object.entries(spent).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]);
+  const total = ranked.reduce((sum, [, m]) => sum + m, 0);
+
+  document.getElementById('week-total').textContent = total ? fmtMins(total) : '—';
+  document.getElementById('week-sub').textContent = total
+    ? `across ${ranked.length} ${ranked.length === 1 ? 'place' : 'places'} · last seven days`
+    : 'Nothing tended in the last seven days.';
+
+  // The share bar, top five by their own hue and the tail gathered behind them.
+  const head = ranked.slice(0, WEEK_HUES.length);
+  const tail = ranked.slice(WEEK_HUES.length);
+  const bands = head.map(([dom, mins], i) => ({ dom, mins, hue: WEEK_HUES[i] }));
+  if (tail.length) {
+    bands.push({
+      dom: `${tail.length} other ${tail.length === 1 ? 'place' : 'places'}`,
+      mins: tail.reduce((sum, [, m]) => sum + m, 0),
+      hue: 'var(--cat-other)'
+    });
+  }
+
+  bands.forEach(({ dom, mins, hue }) => {
+    const share = Math.round((mins / total) * 100);
+    const seg = document.createElement('div');
+    seg.className = 'week-seg';
+    seg.style.width = Math.max(1, (mins / total) * 100) + '%';
+    seg.style.background = hue;
+    seg.title = `${dom} — ${fmtMins(mins)}`;
+    bar.appendChild(seg);
+
+    const li = document.createElement('li');
+    const sw = document.createElement('span');
+    sw.className = 'week-swatch';
+    sw.style.background = hue;
+    const name = document.createElement('span');
+    name.className = 'lg-site';
+    name.textContent = dom;
+    const val = document.createElement('span');
+    val.className = 'lg-val';
+    val.textContent = fmtMins(mins);
+    const pct = document.createElement('span');
+    pct.className = 'lg-share';
+    pct.textContent = share + '%';
+    li.append(sw, name, val, pct);
+    legend.appendChild(li);
+  });
+
+  // The rhythm: one column per day, oldest on the left. One series, one hue —
+  // and only the fullest day is labelled, so the row stays a shape not a table.
+  const perDay = days.slice().reverse().map((key) => ({
+    key,
+    mins: Object.values(usage[key] || {}).reduce((sum, s) => sum + Math.round(s / 60), 0)
+  }));
+  const peak = Math.max(...perDay.map((d) => d.mins), 1);
+  perDay.forEach(({ key, mins }) => {
+    const day = document.createElement('div');
+    day.className = 'week-day';
+    const cap = document.createElement('span');
+    cap.className = 'week-day-peak';
+    cap.textContent = mins === peak && mins > 0 ? fmtMins(mins) : '';
+    const col = document.createElement('div');
+    col.className = 'week-col' + (mins ? '' : ' quiet');
+    col.style.height = Math.max(2, Math.round((mins / peak) * 58)) + 'px';
+    col.title = `${key} — ${mins ? fmtMins(mins) : 'nothing tended'}`;
+    const name = document.createElement('span');
+    name.className = 'week-day-name';
+    name.textContent = DAY_INITIALS[new Date(key + 'T12:00:00').getDay()];
+    day.append(cap, col, name);
+    cols.appendChild(day);
+  });
+}
+
+// One row: the place, its figures, and a bar. When a length was named, a faint
+// mark sits where that length ended and the fill simply carries on past it —
+// one colour throughout, because tinting an overrun would be calling it one.
 function lookbackRow(domain, figuresHTML, namedMins, spentMins, scaleTo) {
   const li = document.createElement('li');
 
@@ -192,7 +277,7 @@ function lookbackRow(domain, figuresHTML, namedMins, spentMins, scaleTo) {
   const track = document.createElement('div');
   track.className = 'lookback-track';
   const fill = document.createElement('div');
-  fill.className = 'lookback-fill' + (namedMins && spentMins > namedMins ? ' over' : '');
+  fill.className = 'lookback-fill';
   fill.style.width = Math.max(2, Math.min(100, Math.round((spentMins / scale) * 100))) + '%';
   track.appendChild(fill);
   if (namedMins > 0 && namedMins < scale) {
