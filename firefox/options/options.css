@@ -171,6 +171,7 @@ input[type="range"] { width: 100%; accent-color: var(--green-primary); }
   --cat-4: #a3519e;
   --cat-5: #b8860b;
   --cat-other: #8f8e85;
+  --col-context: #aadfc7;
 }
 :root[data-theme="dark"] {
   --cat-1: #2da96e;
@@ -179,6 +180,7 @@ input[type="range"] { width: 100%; accent-color: var(--green-primary); }
   --cat-4: #a4629f;
   --cat-5: #b88a25;
   --cat-other: #7b7a72;
+  --col-context: #2f5c46;
 }
 
 .week-card { gap: 22px; }
@@ -248,7 +250,11 @@ input[type="range"] { width: 100%; accent-color: var(--green-primary); }
   min-height: 2px;
 }
 .week-col.quiet { background: var(--border); }
+/* Today is the subject; the six behind it are context, so they step back. */
+.week-col:not(.today) { background: var(--col-context); }
+.week-col.quiet:not(.today) { background: var(--border); }
 .week-day-name { font-size: 10.5px; color: var(--muted); letter-spacing: .04em; }
+.week-day-name.today { color: var(--text); }
 .week-day-peak { font-size: 10.5px; color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* Research — a finding, its source, and what Miru does about it. */

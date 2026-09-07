@@ -131,20 +131,16 @@ async function renderLookback() {
   }
 
   const days = lastDays(res.today, LOOKBACK_WINDOW);
-  const spent = {};       // domain -> minutes
-  const asked = {};       // domain -> { named, visits }
-  days.forEach((key) => {
-    Object.entries((res.usage || {})[key] || {}).forEach(([dom, secs]) => {
-      spent[dom] = (spent[dom] || 0) + Math.round(secs / 60);
-    });
-    Object.entries((res.stayLog || {})[key] || {}).forEach(([dom, e]) => {
-      const a = asked[dom] || (asked[dom] = { named: 0, visits: 0 });
-      a.named += e.named || 0;
-      a.visits += e.visits || 0;
-    });
+  const spent = {};       // domain -> minutes today
+  const asked = {};       // domain -> { named, visits } today
+  Object.entries((res.usage || {})[res.today] || {}).forEach(([dom, secs]) => {
+    spent[dom] = Math.round(secs / 60);
+  });
+  Object.entries((res.stayLog || {})[res.today] || {}).forEach(([dom, e]) => {
+    asked[dom] = { named: e.named || 0, visits: e.visits || 0 };
   });
 
-  renderWeek(days, spent, res.usage || {}, res.stayLog || {});
+  renderGlance(days, res.today, spent, res.usage || {}, asked);
 
   // Panel one: the places you named a length for.
   const namedRows = Object.entries(asked)
@@ -152,7 +148,7 @@ async function renderLookback() {
     .sort((a, b) => b[1].named - a[1].named);
   if (!namedRows.length) {
     named.appendChild(emptyNote(
-      'No lengths named yet. Set a place to calm, and the dial at its door starts the record.'));
+      'No lengths named today. Set a place to calm, and the dial at its door starts the record.'));
   } else {
     namedRows.forEach(([dom, a]) => {
       const took = spent[dom] || 0;
@@ -165,7 +161,7 @@ async function renderLookback() {
   // Panel two: the plain totals.
   const timeRows = Object.entries(spent).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]).slice(0, 8);
   if (!timeRows.length) {
-    time.appendChild(emptyNote('No time tended in the last seven days.'));
+    time.appendChild(emptyNote('No time tended yet today.'));
   } else {
     const max = timeRows[0][1] || 1;
     timeRows.forEach(([dom, mins]) => {
@@ -174,13 +170,14 @@ async function renderLookback() {
   }
 }
 
-// The week at a glance: how much, where it went, and on which days.
+// Today at a glance: how much, and where it went — with the six days behind it
+// as the only context, so today has something to be read against.
 // Five places at most carry a hue of their own; everything past that folds into
 // one "other" band rather than inventing a sixth colour nobody could tell apart.
 const WEEK_HUES = ['var(--cat-1)', 'var(--cat-2)', 'var(--cat-3)', 'var(--cat-4)', 'var(--cat-5)'];
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-function renderWeek(days, spent, usage, stayLog) {
+function renderGlance(days, todayKey, spent, usage, asked) {
   const pie = document.getElementById('week-pie');
   const dial = pie.parentElement;
   const center = document.getElementById('week-center');
@@ -192,8 +189,8 @@ function renderWeek(days, spent, usage, stayLog) {
   const total = ranked.reduce((sum, [, m]) => sum + m, 0);
 
   document.getElementById('week-sub').textContent = total
-    ? `across ${ranked.length} ${ranked.length === 1 ? 'place' : 'places'} · last seven days`
-    : 'Nothing tended in the last seven days.';
+    ? `across ${ranked.length} ${ranked.length === 1 ? 'place' : 'places'} today`
+    : 'Nothing tended yet today.';
   if (!total) { document.getElementById('week-center').textContent = ''; return; }
 
   // The share bar, top five by their own hue and the tail gathered behind them.
@@ -242,7 +239,7 @@ function renderWeek(days, spent, usage, stayLog) {
     li.appendChild(row);
     legend.appendChild(li);
 
-    const mark = { arc, row, band, share, busiest: busiestDay(band.dom, days, usage) };
+    const mark = { arc, row, band, share };
     marks.push(mark);
     const enter = () => pick(mark);
     const leave = () => pick(null);
@@ -255,7 +252,7 @@ function renderWeek(days, spent, usage, stayLog) {
   });
 
   document.getElementById('week-pie-label').textContent =
-    'Share of this week by place: ' + marks.map((m) => `${m.band.dom} ${fmtMins(m.band.mins)}`).join(', ');
+    "Share of today's time by place: " + marks.map((m) => `${m.band.dom} ${fmtMins(m.band.mins)}`).join(', ');
 
   // Hovering or focusing a place lifts its band and reports it in the hole;
   // letting go returns the hole to the week's own total.
@@ -265,26 +262,26 @@ function renderWeek(days, spent, usage, stayLog) {
       m.arc.classList.toggle('on', m === mark);
       m.row.classList.toggle('on', m === mark);
     });
-    if (!mark) { restWeek(); return; }
-    const named = namedFor(mark.band.dom, days, stayLog);
+    if (!mark) { restToday(); return; }
+    const named = asked[mark.band.dom];
     center.textContent = '';
     center.append(
       el('div', 'ctr-val', fmtMins(mark.band.mins)),
       el('div', 'ctr-site', mark.band.dom),
-      el('div', 'ctr-note', `${mark.share}% of the week`),
-      el('div', 'ctr-note', named
+      el('div', 'ctr-note', `${mark.share}% of today`),
+      el('div', 'ctr-note', named && named.named
         ? `${fmtMins(named.named)} named · ${named.visits} ${named.visits === 1 ? 'visit' : 'visits'}`
-        : (mark.busiest ? `busiest ${mark.busiest}` : ''))
+        : '')
     );
   }
-  function restWeek() {
+  function restToday() {
     center.textContent = '';
     center.append(
       el('div', 'ctr-val', total ? fmtMins(total) : '—'),
-      el('div', 'ctr-note', total ? 'in seven days' : 'nothing tended')
+      el('div', 'ctr-note', total ? 'so far today' : 'nothing tended')
     );
   }
-  restWeek();
+  restToday();
 
   // The rhythm: one column per day, oldest on the left. One series, one hue —
   // and only the fullest day is labelled, so the row stays a shape not a table.
@@ -294,17 +291,18 @@ function renderWeek(days, spent, usage, stayLog) {
   }));
   const peak = Math.max(...perDay.map((d) => d.mins), 1);
   perDay.forEach(({ key, mins }) => {
+    const isToday = key === todayKey;
     const day = document.createElement('div');
     day.className = 'week-day';
     const cap = document.createElement('span');
     cap.className = 'week-day-peak';
-    cap.textContent = mins === peak && mins > 0 ? fmtMins(mins) : '';
+    cap.textContent = isToday && mins > 0 ? fmtMins(mins) : '';
     const col = document.createElement('div');
-    col.className = 'week-col' + (mins ? '' : ' quiet');
+    col.className = 'week-col' + (mins ? '' : ' quiet') + (isToday ? ' today' : '');
     col.style.height = Math.max(2, Math.round((mins / peak) * 58)) + 'px';
     col.title = `${key} — ${mins ? fmtMins(mins) : 'nothing tended'}`;
     const name = document.createElement('span');
-    name.className = 'week-day-name';
+    name.className = 'week-day-name' + (isToday ? ' today' : '');
     name.textContent = DAY_INITIALS[new Date(key + 'T12:00:00').getDay()];
     day.append(cap, col, name);
     cols.appendChild(day);
@@ -336,28 +334,6 @@ function drawArc(r, circumference, len, offset, stroke, cls) {
   arc.setAttribute('transform', 'rotate(-90 50 50)');
   arc.setAttribute('class', cls);
   return arc;
-}
-
-// Which day of the week took the most of one place.
-function busiestDay(domain, days, usage) {
-  let best = null;
-  days.forEach((key) => {
-    const secs = (usage[key] || {})[domain] || 0;
-    if (secs > 0 && (!best || secs > best.secs)) best = { key, secs };
-  });
-  if (!best) return '';
-  return new Date(best.key + 'T12:00:00')
-    .toLocaleDateString(undefined, { weekday: 'long' }).toLowerCase();
-}
-
-// What was named at this place's door over the same seven days, if anything.
-function namedFor(domain, days, stayLog) {
-  let named = 0, visits = 0;
-  days.forEach((key) => {
-    const e = (stayLog[key] || {})[domain];
-    if (e) { named += e.named || 0; visits += e.visits || 0; }
-  });
-  return named > 0 ? { named, visits } : null;
 }
 
 // One row: the place, its figures, and a bar. When a length was named, a faint

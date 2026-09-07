@@ -19,8 +19,8 @@
         <span class="wordmark">miru</span>
       </div>
       <nav class="nav">
-        <button class="nav-item active" data-target="sec-places">Places</button>
-        <button class="nav-item" data-target="sec-lookback">Looking back</button>
+        <button class="nav-item active" data-target="sec-lookback">Looking back</button>
+        <button class="nav-item" data-target="sec-places">Places</button>
         <button class="nav-item" data-target="sec-breath">Breathing</button>
         <button class="nav-item" data-target="sec-night">Night</button>
         <button class="nav-item" data-target="sec-appearance">Appearance</button>
@@ -35,7 +35,7 @@
     <main class="content">
 
       <!-- Places -->
-      <section class="section active" id="sec-places">
+      <section class="section" id="sec-places">
         <h2 class="heading">Places</h2>
         <p class="sub">The places that pull at you, and how Miru meets you at each door. Everything unlisted loads untouched.</p>
 
@@ -87,9 +87,9 @@
       </section>
 
       <!-- Looking back -->
-      <section class="section" id="sec-lookback">
+      <section class="section active" id="sec-lookback">
         <h2 class="heading">Looking back</h2>
-        <p class="sub">The last seven days, kept on this device and nowhere else. Nothing here is a score.</p>
+        <p class="sub">Today, with the week behind it — kept on this device and nowhere else. Nothing here is a score.</p>
 
         <div class="card week-card">
           <div class="week-sub" id="week-sub">Nothing tended yet.</div>
@@ -102,20 +102,20 @@
           </div>
           <p class="visually-hidden" id="week-pie-label"></p>
           <div class="week-rhythm">
-            <div class="week-label">Day by day</div>
+            <div class="week-label">Today, and the six days behind it</div>
             <div class="week-days" id="week-days"></div>
           </div>
         </div>
 
         <div class="card">
           <div class="toggle-title">Named, and spent</div>
-          <div class="toggle-desc">What you asked for at the door of a calmed place, beside what the day actually took. Both numbers are yours; Miru only does the arithmetic.</div>
+          <div class="toggle-desc">What you asked for at the door of a calmed place today, beside what the day actually took. Both numbers are yours; Miru only does the arithmetic.</div>
           <ul class="lookback-list" id="lookback-named"></ul>
         </div>
 
         <div class="card">
           <div class="toggle-title">Where the time went</div>
-          <div class="toggle-desc">Every site, calmed or not, over the same seven days.</div>
+          <div class="toggle-desc">Every site today, calmed or not.</div>
           <ul class="lookback-list" id="lookback-time"></ul>
         </div>
 
