@@ -144,7 +144,7 @@ async function renderLookback() {
     });
   });
 
-  renderWeek(days, spent, res.usage || {});
+  renderWeek(days, spent, res.usage || {}, res.stayLog || {});
 
   // Panel one: the places you named a length for.
   const namedRows = Object.entries(asked)
@@ -180,19 +180,21 @@ async function renderLookback() {
 const WEEK_HUES = ['var(--cat-1)', 'var(--cat-2)', 'var(--cat-3)', 'var(--cat-4)', 'var(--cat-5)'];
 const DAY_INITIALS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
-function renderWeek(days, spent, usage) {
-  const bar = document.getElementById('week-bar');
+function renderWeek(days, spent, usage, stayLog) {
+  const pie = document.getElementById('week-pie');
+  const dial = pie.parentElement;
+  const center = document.getElementById('week-center');
   const legend = document.getElementById('week-legend');
   const cols = document.getElementById('week-days');
-  bar.innerHTML = ''; legend.innerHTML = ''; cols.innerHTML = '';
+  pie.innerHTML = ''; legend.innerHTML = ''; cols.innerHTML = '';
 
   const ranked = Object.entries(spent).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]);
   const total = ranked.reduce((sum, [, m]) => sum + m, 0);
 
-  document.getElementById('week-total').textContent = total ? fmtMins(total) : '—';
   document.getElementById('week-sub').textContent = total
     ? `across ${ranked.length} ${ranked.length === 1 ? 'place' : 'places'} · last seven days`
     : 'Nothing tended in the last seven days.';
+  if (!total) { document.getElementById('week-center').textContent = ''; return; }
 
   // The share bar, top five by their own hue and the tail gathered behind them.
   const head = ranked.slice(0, WEEK_HUES.length);
@@ -206,31 +208,83 @@ function renderWeek(days, spent, usage) {
     });
   }
 
-  bands.forEach(({ dom, mins, hue }) => {
-    const share = Math.round((mins / total) * 100);
-    const seg = document.createElement('div');
-    seg.className = 'week-seg';
-    seg.style.width = Math.max(1, (mins / total) * 100) + '%';
-    seg.style.background = hue;
-    seg.title = `${dom} — ${fmtMins(mins)}`;
-    bar.appendChild(seg);
+  // The ring. Each band is drawn as a dashed arc on a shared circle, with a gap
+  // of surface between it and the next, and carries a second, fatter invisible
+  // arc so the pointer has something generous to land on.
+  const R = 38, C = 2 * Math.PI * R, GAP = 1.2;
+  let offset = 0;
+  const marks = [];
+  bands.forEach((band, i) => {
+    const len = (band.mins / total) * C;
+    const arc = drawArc(R, C, len, offset, band.hue, 'week-arc');
+    const hit = drawArc(R, C, len, offset, 'transparent', 'week-hit');
+    hit.setAttribute('stroke-width', '26');
+    pie.append(arc, hit);
+    offset += len;
 
-    const li = document.createElement('li');
+    const share = Math.round((band.mins / total) * 100);
+    const row = document.createElement('button');
+    row.type = 'button';
     const sw = document.createElement('span');
     sw.className = 'week-swatch';
-    sw.style.background = hue;
+    sw.style.background = band.hue;
     const name = document.createElement('span');
     name.className = 'lg-site';
-    name.textContent = dom;
+    name.textContent = band.dom;          // a site name is untrusted text
     const val = document.createElement('span');
     val.className = 'lg-val';
-    val.textContent = fmtMins(mins);
+    val.textContent = fmtMins(band.mins);
     const pct = document.createElement('span');
     pct.className = 'lg-share';
     pct.textContent = share + '%';
-    li.append(sw, name, val, pct);
+    row.append(sw, name, val, pct);
+    const li = document.createElement('li');
+    li.appendChild(row);
     legend.appendChild(li);
+
+    const mark = { arc, row, band, share, busiest: busiestDay(band.dom, days, usage) };
+    marks.push(mark);
+    const enter = () => pick(mark);
+    const leave = () => pick(null);
+    [hit, row].forEach((el) => {
+      el.addEventListener('mouseenter', enter);
+      el.addEventListener('mouseleave', leave);
+      el.addEventListener('focus', enter);
+      el.addEventListener('blur', leave);
+    });
   });
+
+  document.getElementById('week-pie-label').textContent =
+    'Share of this week by place: ' + marks.map((m) => `${m.band.dom} ${fmtMins(m.band.mins)}`).join(', ');
+
+  // Hovering or focusing a place lifts its band and reports it in the hole;
+  // letting go returns the hole to the week's own total.
+  function pick(mark) {
+    dial.classList.toggle('picked', !!mark);
+    marks.forEach((m) => {
+      m.arc.classList.toggle('on', m === mark);
+      m.row.classList.toggle('on', m === mark);
+    });
+    if (!mark) { restWeek(); return; }
+    const named = namedFor(mark.band.dom, days, stayLog);
+    center.textContent = '';
+    center.append(
+      el('div', 'ctr-val', fmtMins(mark.band.mins)),
+      el('div', 'ctr-site', mark.band.dom),
+      el('div', 'ctr-note', `${mark.share}% of the week`),
+      el('div', 'ctr-note', named
+        ? `${fmtMins(named.named)} named · ${named.visits} ${named.visits === 1 ? 'visit' : 'visits'}`
+        : (mark.busiest ? `busiest ${mark.busiest}` : ''))
+    );
+  }
+  function restWeek() {
+    center.textContent = '';
+    center.append(
+      el('div', 'ctr-val', total ? fmtMins(total) : '—'),
+      el('div', 'ctr-note', total ? 'in seven days' : 'nothing tended')
+    );
+  }
+  restWeek();
 
   // The rhythm: one column per day, oldest on the left. One series, one hue —
   // and only the fullest day is labelled, so the row stays a shape not a table.
@@ -255,6 +309,55 @@ function renderWeek(days, spent, usage) {
     day.append(cap, col, name);
     cols.appendChild(day);
   });
+}
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  n.className = cls;
+  n.textContent = text;                   // never innerHTML: names come from the web
+  return n;
+}
+
+// One arc of the ring, drawn as a single dash on a shared circle. The gap that
+// separates it from its neighbour is taken out of its own length, so the ring
+// keeps its geometry and no stroke is ever drawn around a mark.
+function drawArc(r, circumference, len, offset, stroke, cls) {
+  const arc = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  arc.setAttribute('cx', '50');
+  arc.setAttribute('cy', '50');
+  arc.setAttribute('r', String(r));
+  arc.setAttribute('fill', 'none');
+  arc.setAttribute('stroke', stroke);
+  arc.setAttribute('stroke-width', '12');
+  arc.setAttribute('stroke-linecap', 'butt');
+  const drawn = Math.max(0.5, len - 1.2);
+  arc.setAttribute('stroke-dasharray', `${drawn} ${circumference - drawn}`);
+  arc.setAttribute('stroke-dashoffset', String(-offset));
+  arc.setAttribute('transform', 'rotate(-90 50 50)');
+  arc.setAttribute('class', cls);
+  return arc;
+}
+
+// Which day of the week took the most of one place.
+function busiestDay(domain, days, usage) {
+  let best = null;
+  days.forEach((key) => {
+    const secs = (usage[key] || {})[domain] || 0;
+    if (secs > 0 && (!best || secs > best.secs)) best = { key, secs };
+  });
+  if (!best) return '';
+  return new Date(best.key + 'T12:00:00')
+    .toLocaleDateString(undefined, { weekday: 'long' }).toLowerCase();
+}
+
+// What was named at this place's door over the same seven days, if anything.
+function namedFor(domain, days, stayLog) {
+  let named = 0, visits = 0;
+  days.forEach((key) => {
+    const e = (stayLog[key] || {})[domain];
+    if (e) { named += e.named || 0; visits += e.visits || 0; }
+  });
+  return named > 0 ? { named, visits } : null;
 }
 
 // One row: the place, its figures, and a bar. When a length was named, a faint

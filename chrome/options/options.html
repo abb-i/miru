@@ -92,12 +92,15 @@
         <p class="sub">The last seven days, kept on this device and nowhere else. Nothing here is a score.</p>
 
         <div class="card week-card">
-          <div class="week-head">
-            <div class="week-hero" id="week-total">—</div>
-            <div class="week-sub" id="week-sub">Nothing tended yet.</div>
+          <div class="week-sub" id="week-sub">Nothing tended yet.</div>
+          <div class="week-share">
+            <div class="week-dial">
+              <svg id="week-pie" viewBox="0 0 100 100" role="img" aria-labelledby="week-pie-label"></svg>
+              <div class="week-center" id="week-center"></div>
+            </div>
+            <ul class="week-legend" id="week-legend"></ul>
           </div>
-          <div class="week-bar" id="week-bar" role="img" aria-label="Share of this week's time by place"></div>
-          <ul class="week-legend" id="week-legend"></ul>
+          <p class="visually-hidden" id="week-pie-label"></p>
           <div class="week-rhythm">
             <div class="week-label">Day by day</div>
             <div class="week-days" id="week-days"></div>
