@@ -143,22 +143,9 @@
 @keyframes miru-rise{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
 `;
 
-  // Some sites enforce Trusted Types, and that policy reaches an extension's
-  // isolated world too — a raw innerHTML assignment there throws and the breath
-  // never paints. Mint a pass-through policy where one is allowed; where it
-  // isn't, the caller's try/catch falls back to the standalone breath window.
-  let ttPolicy;
-  function safeHTML(str) {
-    if (ttPolicy === undefined) {
-      ttPolicy = null;
-      try {
-        if (window.trustedTypes && window.trustedTypes.createPolicy) {
-          ttPolicy = window.trustedTypes.createPolicy('miru-overlay', { createHTML: (s) => s });
-        }
-      } catch (e) { ttPolicy = null; }
-    }
-    try { return ttPolicy ? ttPolicy.createHTML(str) : str; } catch (e) { return str; }
-  }
+  // Nothing here writes markup, so the Trusted Types policy the overlay used to
+  // mint is gone with it: document.createElement is not a sink, and a site that
+  // enforces require-trusted-types-for 'script' has nothing to refuse.
 
   function ensureStyle(root) {
     // Prefer a constructable stylesheet: it applies even under a strict page CSP
@@ -214,39 +201,74 @@
     const cycleMs = pattern.phases.reduce((a, p) => a + p.ms, 0);
     const totalCycles = Math.max(1, Math.round(((opts.duration || 15) * 1000) / cycleMs)) + (opts.extraCycles || 0);
 
-    o.innerHTML = safeHTML(`
-      <div class="miru-breath">
-        <div class="miru-orb">
-          <div class="miru-glow"></div>
-          <svg class="miru-fern" viewBox="0 0 48 56" xmlns="http://www.w3.org/2000/svg">
-            <path class="miru-fern-ghost" d="${SPIRAL}"/>
-            <path class="miru-fern-live" d="${SPIRAL}"/>
-          </svg>
-        </div>
-        <div class="miru-phase">Breathe</div>
-        <div class="miru-word"></div>
-        ${opts.subtitle ? `<div class="miru-sub">${opts.subtitle}</div>` : ''}
-        ${totalCycles > 1 ? `<div class="miru-cycles">${'<i></i>'.repeat(totalCycles)}</div>` : ''}
-      </div>
-      <div class="miru-choice">
-        <div class="miru-arrive"></div>
-        <div class="miru-q">${askStay
-          ? (domain ? `How long on <b>${domain}</b>?` : 'How long?')
-          : (domain ? `Continue to <b>${domain}</b>?` : 'Continue?')}</div>
-        ${stayNote ? `<div class="miru-stay-note">${stayNote}</div>` : ''}
-        ${askStay ? `
-        <div class="miru-stay">
-          <div class="miru-stay-val"><b>0</b> minutes</div>
-          <input class="miru-range" type="range" min="0" max="${stayMax}" step="1" value="0"
-                 aria-label="minutes to stay" />
-          <div class="miru-ticks"><span>0m</span><span>${stayMax}m</span></div>
-        </div>` : ''}
-        <div class="miru-actions">
-          <button class="miru-continue">${askStay ? 'stay' : 'continue'}</button>
-          <button class="miru-ghost miru-back">${opts.backLabel || 'go back'}</button>
-        </div>
-      </div>
-      ${domain ? `<div class="miru-pill">${domain}</div>` : ''}`);
+    // Built as nodes, not markup. Two reasons: an innerHTML sink in an
+    // extension is read as a hazard by reviewers and linters on sight, and the
+    // DOM APIs are simply not a sink at all — which also means the pages that
+    // enforce Trusted Types have nothing to object to.
+    const node = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    };
+    const svgNode = (tag, attrs) => {
+      const n = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v));
+      return n;
+    };
+    // A question with the domain set in it: two text runs around one bold name.
+    const question = (lead, tail) => {
+      const q = node('div', 'miru-q');
+      if (!domain) { q.textContent = tail; return q; }
+      const b = node('b', '', domain);
+      q.append(document.createTextNode(lead), b, document.createTextNode('?'));
+      return q;
+    };
+
+    const breathBox = node('div', 'miru-breath');
+    const orbBox = node('div', 'miru-orb');
+    orbBox.appendChild(node('div', 'miru-glow'));
+    const fernSvg = svgNode('svg', { class: 'miru-fern', viewBox: '0 0 48 56' });
+    fernSvg.append(svgNode('path', { class: 'miru-fern-ghost', d: SPIRAL }),
+                svgNode('path', { class: 'miru-fern-live', d: SPIRAL }));
+    orbBox.appendChild(fernSvg);
+    breathBox.append(orbBox, node('div', 'miru-phase', 'Breathe'), node('div', 'miru-word'));
+    if (opts.subtitle) breathBox.appendChild(node('div', 'miru-sub', opts.subtitle));
+    if (totalCycles > 1) {
+      const dotsBox = node('div', 'miru-cycles');
+      for (let i = 0; i < totalCycles; i++) dotsBox.appendChild(node('i'));
+      breathBox.appendChild(dotsBox);
+    }
+
+    const choiceBox = node('div', 'miru-choice');
+    choiceBox.appendChild(node('div', 'miru-arrive'));
+    choiceBox.appendChild(askStay
+      ? question('How long on ', 'How long?')
+      : question('Continue to ', 'Continue?'));
+    if (stayNote) choiceBox.appendChild(node('div', 'miru-stay-note', stayNote));
+    if (askStay) {
+      const stayBox = node('div', 'miru-stay');
+      const valBox = node('div', 'miru-stay-val');
+      valBox.append(node('b', '', '0'), document.createTextNode(' minutes'));
+      const rangeInput = document.createElement('input');
+      rangeInput.className = 'miru-range';
+      // Attributes, not properties, so the dial's starting point is in the
+      // markup the same way it was before — value included.
+      Object.entries({ type: 'range', min: '0', max: String(stayMax), step: '1', value: '0',
+                       'aria-label': 'minutes to stay' })
+        .forEach(([k, v]) => rangeInput.setAttribute(k, v));
+      const ticksBox = node('div', 'miru-ticks');
+      ticksBox.append(node('span', '', '0m'), node('span', '', stayMax + 'm'));
+      stayBox.append(valBox, rangeInput, ticksBox);
+      choiceBox.appendChild(stayBox);
+    }
+    const actionsBox = node('div', 'miru-actions');
+    actionsBox.append(node('button', 'miru-continue', askStay ? 'stay' : 'continue'),
+                   node('button', 'miru-ghost miru-back', opts.backLabel || 'go back'));
+    choiceBox.appendChild(actionsBox);
+
+    o.append(breathBox, choiceBox);
+    if (domain) o.appendChild(node('div', 'miru-pill', domain));
     root.appendChild(o);
 
     const orb = o.querySelector('.miru-orb');
@@ -385,17 +407,32 @@
     const o = document.createElement('div');
     o.className = 'miru-overlay miru-' + (opts.theme === 'light' ? 'light' : 'dark');
     const domain = hostnameOf(opts.domain || '');
-    o.innerHTML = safeHTML(`
-      <div class="miru-block">
-        <svg class="miru-spiral-lg" viewBox="0 0 48 56" width="50" height="58" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="${SPIRAL}" stroke="#2da96e" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-        </svg>
-        <div class="miru-not"></div>
-        ${domain ? `<div class="miru-pill" style="position:static;transform:none;">${domain}</div>` : ''}
-        <button class="miru-ghost miru-back">go back</button>
-        ${opts.onPeek ? `<button class="miru-peek">stay five minutes</button>` : ''}
-        ${opts.onPeek && opts.peekNote ? `<div class="miru-peek-note">${opts.peekNote}</div>` : ''}
-      </div>`);
+    // Nodes, not markup — same reasoning as the breath above.
+    const mk = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      if (cls) n.className = cls;
+      if (text != null) n.textContent = text;
+      return n;
+    };
+    const box = mk('div', 'miru-block');
+    const spiral = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    Object.entries({ class: 'miru-spiral-lg', viewBox: '0 0 48 56', width: '50', height: '58', fill: 'none' })
+      .forEach(([k, v]) => spiral.setAttribute(k, v));
+    const spiralPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    Object.entries({ d: SPIRAL, stroke: '#2da96e', 'stroke-width': '1.6', 'stroke-linecap': 'round', fill: 'none' })
+      .forEach(([k, v]) => spiralPath.setAttribute(k, v));
+    spiral.appendChild(spiralPath);
+    box.append(spiral, mk('div', 'miru-not'));
+    if (domain) {
+      const pill = mk('div', 'miru-pill', domain);
+      pill.style.position = 'static';
+      pill.style.transform = 'none';
+      box.appendChild(pill);
+    }
+    box.appendChild(mk('button', 'miru-ghost miru-back', 'go back'));
+    if (opts.onPeek) box.appendChild(mk('button', 'miru-peek', 'stay five minutes'));
+    if (opts.onPeek && opts.peekNote) box.appendChild(mk('div', 'miru-peek-note', opts.peekNote));
+    o.appendChild(box);
     root.appendChild(o);
     o.querySelector('.miru-not').textContent = word('blocker') || 'Not today.';
 

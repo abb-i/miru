@@ -72,7 +72,7 @@ async function renderUsage() {
   document.getElementById('usage-total').textContent = totalSecs > 0 ? fmt(totalSecs) : '—';
 
   const list = document.getElementById('usage-list');
-  list.innerHTML = '';
+  list.replaceChildren();
   if (entries.length === 0) {
     const note = document.createElement('div');
     note.className = 'empty-note';

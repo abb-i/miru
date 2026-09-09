@@ -158,9 +158,15 @@
       const c = document.createElement('button');
       c.className = 'choice' + (key === state.pattern ? ' selected' : '');
       c.dataset.pattern = key;
-      c.innerHTML = `<span class="choice-title">${p.label}</span>
-        <span class="choice-hint">${p.hint}</span>
-        <span class="choice-desc">${p.desc}</span>`;
+      // Nodes rather than markup — the same reason as everywhere else in Miru:
+      // an innerHTML sink is a hazard on sight, and these are three plain lines.
+      [['choice-title', p.label], ['choice-hint', p.hint], ['choice-desc', p.desc]]
+        .forEach(([cls, text]) => {
+          const span = document.createElement('span');
+          span.className = cls;
+          span.textContent = text;
+          c.appendChild(span);
+        });
       c.addEventListener('click', () => {
         $$('#pattern-grid .choice').forEach((x) => x.classList.remove('selected'));
         c.classList.add('selected');

@@ -122,8 +122,8 @@ async function renderLookback() {
   const res = await chrome.runtime.sendMessage({ type: 'MIRU_GET_LOOKBACK' }).catch(() => null);
   const named = document.getElementById('lookback-named');
   const time = document.getElementById('lookback-time');
-  named.innerHTML = '';
-  time.innerHTML = '';
+  named.replaceChildren();
+  time.replaceChildren();
   if (!res) {
     named.appendChild(emptyNote('Nothing to show yet.'));
     time.appendChild(emptyNote('Nothing to show yet.'));
@@ -152,9 +152,11 @@ async function renderLookback() {
   } else {
     namedRows.forEach(([dom, a]) => {
       const took = spent[dom] || 0;
-      named.appendChild(lookbackRow(dom,
-        `<b>${fmtMins(a.named)}</b> named · <b>${fmtMins(took)}</b> spent · ${a.visits} ${a.visits === 1 ? 'visit' : 'visits'}`,
-        a.named, took));
+      named.appendChild(lookbackRow(dom, [
+        { v: fmtMins(a.named), strong: true }, { v: ' named · ' },
+        { v: fmtMins(took), strong: true }, { v: ' spent · ' },
+        { v: `${a.visits} ${a.visits === 1 ? 'visit' : 'visits'}` }
+      ], a.named, took));
     });
   }
 
@@ -165,7 +167,7 @@ async function renderLookback() {
   } else {
     const max = timeRows[0][1] || 1;
     timeRows.forEach(([dom, mins]) => {
-      time.appendChild(lookbackRow(dom, `<b>${fmtMins(mins)}</b>`, 0, mins, max));
+      time.appendChild(lookbackRow(dom, [{ v: fmtMins(mins), strong: true }], 0, mins, max));
     });
   }
 }
@@ -183,7 +185,7 @@ function renderGlance(days, todayKey, spent, usage, asked) {
   const center = document.getElementById('week-center');
   const legend = document.getElementById('week-legend');
   const cols = document.getElementById('week-days');
-  pie.innerHTML = ''; legend.innerHTML = ''; cols.innerHTML = '';
+  pie.replaceChildren(); legend.replaceChildren(); cols.replaceChildren();
 
   const ranked = Object.entries(spent).filter(([, m]) => m > 0).sort((a, b) => b[1] - a[1]);
   const total = ranked.reduce((sum, [, m]) => sum + m, 0);
@@ -339,7 +341,7 @@ function drawArc(r, circumference, len, offset, stroke, cls) {
 // One row: the place, its figures, and a bar. When a length was named, a faint
 // mark sits where that length ended and the fill simply carries on past it —
 // one colour throughout, because tinting an overrun would be calling it one.
-function lookbackRow(domain, figuresHTML, namedMins, spentMins, scaleTo) {
+function lookbackRow(domain, parts, namedMins, spentMins, scaleTo) {
   const li = document.createElement('li');
 
   const row = document.createElement('div');
@@ -347,9 +349,17 @@ function lookbackRow(domain, figuresHTML, namedMins, spentMins, scaleTo) {
   const site = document.createElement('span');
   site.className = 'lookback-site';
   site.textContent = domain;
+  // Assembled as nodes rather than markup. Nothing here comes from a page, but
+  // an innerHTML sink in an extension is a thing reviewers and linters read as
+  // a hazard on sight, and there is no reason to spend that on four numbers.
   const figures = document.createElement('span');
   figures.className = 'lookback-figures';
-  figures.innerHTML = figuresHTML;      // built here from integers only
+  parts.forEach((part) => {
+    if (!part.strong) { figures.appendChild(document.createTextNode(part.v)); return; }
+    const b = document.createElement('b');
+    b.textContent = part.v;
+    figures.appendChild(b);
+  });
   row.append(site, figures);
 
   const scale = scaleTo || Math.max(namedMins, spentMins) || 1;
@@ -560,7 +570,7 @@ async function setPosture(domain, posture) {
 function renderPlaceSuggestions(places) {
   const wrap = document.getElementById('place-suggest-pills');
   const listed = new Set(places.map(p => p.domain));
-  wrap.innerHTML = '';
+  wrap.replaceChildren();
   const ordered = [...COMMONLY_DISTRACTING].sort(
     (a, b) => (listed.has(b.domain) ? 1 : 0) - (listed.has(a.domain) ? 1 : 0));
   ordered.forEach(({ domain, label }) => {
@@ -576,7 +586,7 @@ function renderPlaceSuggestions(places) {
 
 function renderPlaces(places) {
   const list = document.getElementById('place-list');
-  list.innerHTML = '';
+  list.replaceChildren();
   if (!places.length) {
     const note = document.createElement('div');
     note.className = 'empty-note';
@@ -615,7 +625,7 @@ function renderPlaces(places) {
 // ---- Allowed exceptions rendering -------------------------------------------
 function renderAllowList(domains) {
   const list = document.getElementById('allow-list');
-  list.innerHTML = '';
+  list.replaceChildren();
   domains = domains || [];
   if (!domains.length) {
     const note = document.createElement('div');
