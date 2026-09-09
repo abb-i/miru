@@ -211,27 +211,64 @@ function isCustomExcepted(url) {
 // removeCSS them again — a registered content script's CSS would outlive its
 // own unregistration on already-loaded pages. New pages are grayed from the
 // tabs.onUpdated listener while the window holds.
+//
+// This reconciles rather than reacting to the moment the window opens. It used
+// to fire once on the transition and return early ever after while the flag
+// matched — so a single missed or half-finished transition (a worker asleep at
+// ten, a tab query that threw, settings not yet read on a cold wake) left the
+// flag saying "night" with nothing grayed, and every later tick agreed with
+// itself and did nothing. The window then worked only on the day it was
+// switched on. Comparing intent against the tabs that actually exist, every
+// minute, means any missed edge simply heals on the next tick.
 let nightGrayOn = false;
-chrome.storage.local.get('nightGrayOn').then(({ nightGrayOn: v }) => { nightGrayOn = !!v; });
+let nightGrayTabs = new Set();
+chrome.storage.local.get(['nightGrayOn', 'nightGrayTabs']).then((v) => {
+  nightGrayOn = !!v.nightGrayOn;
+  nightGrayTabs = new Set(v.nightGrayTabs || []);
+});
 
 async function applyNightGray() {
+  await settingsReady;                     // never decide on half-loaded settings
+  // If the read never landed, this tick knows nothing — and knowing nothing must
+  // not be read as "night is over". Leave the tabs exactly as they are.
+  if (!settingsLoaded) return;
   const on = !!(settings.nightModeEnabled && isNightTime(settings));
-  const { nightGrayOn: stored = false } = await chrome.storage.local.get('nightGrayOn');
-  nightGrayOn = on;
-  if (on === stored) return;
-  await chrome.storage.local.set({ nightGrayOn: on });
+  if (on !== nightGrayOn) {
+    nightGrayOn = on;
+    chrome.storage.local.set({ nightGrayOn: on }).catch(() => {});
+  }
   let tabs = [];
   try { tabs = await chrome.tabs.query({ url: ['http://*/*', 'https://*/*'] }); } catch (e) { return; }
+  const live = new Set();
+  let changed = false;
   for (const t of tabs) {
-    if (on) grayNightTab(t);
-    else chrome.scripting.removeCSS({ target: { tabId: t.id }, files: ['utils/gray.css'] }).catch(() => {});
+    if (t.id == null || !/^https?:\/\//i.test(t.url || '')) continue;
+    const should = on && !isCustomExcepted(t.url);   // exceptions keep their color
+    if (should) {
+      live.add(t.id);
+      if (!nightGrayTabs.has(t.id)) {
+        chrome.scripting.insertCSS({ target: { tabId: t.id }, files: ['utils/gray.css'] }).catch(() => {});
+        nightGrayTabs.add(t.id);
+        changed = true;
+      }
+    } else if (nightGrayTabs.has(t.id)) {
+      chrome.scripting.removeCSS({ target: { tabId: t.id }, files: ['utils/gray.css'] }).catch(() => {});
+      nightGrayTabs.delete(t.id);
+      changed = true;
+    }
   }
+  for (const id of [...nightGrayTabs]) if (!live.has(id)) { nightGrayTabs.delete(id); changed = true; }
+  if (changed) chrome.storage.local.set({ nightGrayTabs: [...nightGrayTabs] }).catch(() => {});
 }
 
 function grayNightTab(tab) {
   if (!tab || tab.id == null || !/^https?:\/\//i.test(tab.url || '')) return;
   if (isCustomExcepted(tab.url)) return;  // exceptions keep their color
   chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['utils/gray.css'] }).catch(() => {});
+  if (!nightGrayTabs.has(tab.id)) {
+    nightGrayTabs.add(tab.id);
+    chrome.storage.local.set({ nightGrayTabs: [...nightGrayTabs] }).catch(() => {});
+  }
 }
 
 // --- Calm stays (a named length of time inside a calmed place) ---------------
@@ -398,7 +435,8 @@ async function reconcileStays() {
 
 // --- Lifecycle --------------------------------------------------------------
 async function init() {
-  await reloadSettings();
+  settingsReady = reloadSettings();
+  await settingsReady;
   sessionActive = !!(await getActiveSession());
   // Restore a periodic breath that was armed but not yet delivered before the
   // worker slept, so its rhythm survives the restart.
@@ -430,8 +468,10 @@ async function init() {
   chrome.alarms.create('miru-schedule', { periodInMinutes: 1 });
   try { chrome.idle.setDetectionInterval(60); } catch (e) {}
 }
+let settingsLoaded = false;
 async function reloadSettings() {
   settings = await getSettings();
+  settingsLoaded = true;
   // 45m was an option before v2.2; the rhythm is half-hourly or hourly now.
   const iv = settings.periodicBreathInterval;
   if (iv !== 30 && iv !== 60) settings.periodicBreathInterval = iv > 30 ? 60 : 30;
@@ -490,7 +530,10 @@ chrome.runtime.onInstalled.addListener(async (details) => {
   }
 });
 chrome.runtime.onStartup.addListener(init);
-reloadSettings(); // keep `settings` warm for messaging on every worker wake
+// Keep `settings` warm for messaging on every worker wake — and hold the promise,
+// because an alarm can wake this worker and run before the read has resolved.
+// Anything that decides something from `settings` awaits this first.
+let settingsReady = reloadSettings();
 // Same for the session flag — rebuildRules on a fresh worker must not see it
 // stale-false and drop rules mid-session.
 getActiveSession().then((s) => { sessionActive = !!s; });
@@ -504,7 +547,8 @@ chrome.storage.local.get('breathDue').then(({ breathDue: bd }) => {
 
 chrome.storage.onChanged.addListener(async (c, area) => {
   if (area === 'sync') {
-    await reloadSettings();
+    settingsReady = reloadSettings();
+    await settingsReady;
     await rebuildRules();
     await applyAllowRule();
     await applyNightGray();
@@ -616,6 +660,8 @@ async function endPeek(tabId) {
 chrome.tabs.onUpdated.addListener((id, info, tab) => {
   if (info.status === 'complete') DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
   if (info.url || info.status === 'complete') { scheduleAllow(); updateActive(); }
+  // A navigation discards the injected CSS with the document it belonged to.
+  if (info.url) nightGrayTabs.delete(id);
   if (nightGrayOn && info.status === 'complete') grayNightTab(tab);
   // Leaving a calmed place ends its stay; staying inside it keeps the clock.
   if (info.url) stayFollowTab(id, info.url);
@@ -627,6 +673,7 @@ chrome.tabs.onUpdated.addListener((id, info, tab) => {
 });
 chrome.tabs.onRemoved.addListener((id) => {
   DNR.updateSessionRules({ removeRuleIds: [RID_ALLOWONCE_BASE + id] }).catch(() => {});
+  nightGrayTabs.delete(id);
   endPeek(id);
   clearStay(id, { ungray: false });   // the tab is gone; nothing left to un-gray
   scheduleAllow();
